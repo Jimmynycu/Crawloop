@@ -1,233 +1,54 @@
-<svg width="100%" viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-labelledby="title desc" preserveAspectRatio="xMidYMid meet" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace">
-  <title id="title">crawloop — compile your LLM scraper into free, self-healing code</title>
-  <desc id="desc">Retro-tech hero banner. The crawloop wordmark with the "oo" rendered as a regenerating loop, set on a dark circuit-board field. A green "serve now, $0" badge sits in front of a dimmed indigo healing loop, illustrating the contract: serve now, heal in the background.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="1200" height="360" role="img" aria-labelledby="crawloop-title crawloop-desc" preserveAspectRatio="xMidYMid meet" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title id="crawloop-title">crawloop</title>
+  <desc id="crawloop-desc">crawloop, a self-healing web scraper. The LLM writes the crawler once, then your pages run free. A site redesign is served instantly via the LLM, a new crawler is promoted, and steady-state model calls return to zero.</desc>
 
-  <defs>
-    <!-- ===== palette (from the design system) ===== -->
-    <!-- base/dark -->
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0"   stop-color="#0b1020"/>
-      <stop offset="0.55" stop-color="#0d1117"/>
-      <stop offset="1"   stop-color="#0a0e1a"/>
-    </linearGradient>
-    <!-- vignette to focus the center -->
-    <radialGradient id="vignette" cx="0.42" cy="0.46" r="0.85">
-      <stop offset="0"    stop-color="#0d1117" stop-opacity="0"/>
-      <stop offset="0.7"  stop-color="#070a12" stop-opacity="0"/>
-      <stop offset="1"    stop-color="#05070d" stop-opacity="0.85"/>
-    </radialGradient>
-    <!-- wordmark fill: blue → indigo → pink Y2K sweep -->
-    <linearGradient id="ink" x1="0" y1="0" x2="1" y2="0.35">
-      <stop offset="0"    stop-color="#5aa2ff"/>
-      <stop offset="0.45" stop-color="#6f77dd"/>
-      <stop offset="0.78" stop-color="#a35bd8"/>
-      <stop offset="1"    stop-color="#db2777"/>
-    </linearGradient>
-    <!-- loop arrow gradient: indigo (heal) -->
-    <linearGradient id="loopink" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#7f77dd"/>
-      <stop offset="1" stop-color="#4f46e5"/>
-    </linearGradient>
-    <!-- green serve gradient -->
-    <linearGradient id="serve" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#3fb950"/>
-      <stop offset="1" stop-color="#16a34a"/>
-    </linearGradient>
-    <!-- circuit trace gradient (fades out toward edges) -->
-    <linearGradient id="trace" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0"    stop-color="#1e3a8a" stop-opacity="0"/>
-      <stop offset="0.2"  stop-color="#2563eb" stop-opacity="0.7"/>
-      <stop offset="0.8"  stop-color="#2563eb" stop-opacity="0.7"/>
-      <stop offset="1"    stop-color="#1e3a8a" stop-opacity="0"/>
-    </linearGradient>
+  <!-- self-contained background panel: reads deliberately on both #0d1117 and #ffffff -->
+  <rect x="0" y="0" width="1200" height="360" rx="20" fill="#0A0C14"/>
+  <rect x="0.75" y="0.75" width="1198.5" height="358.5" rx="19.25" fill="none" stroke="#222A35" stroke-width="1.5"/>
 
-    <!-- soft neon glow -->
-    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
-      <feGaussianBlur stdDeviation="6" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-    <filter id="glowSoft" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="9" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-    <filter id="glowTiny" x="-120%" y="-120%" width="340%" height="340%">
-      <feGaussianBlur stdDeviation="2.2"/>
-    </filter>
+  <!-- ============ WORDMARK: plain text, no chrome, no glow ============ -->
+  <text x="92" y="150" font-size="92" font-weight="700" letter-spacing="-2.5" fill="#C9D1D9">crawloop</text>
+  <!-- the single heal-green accent: a left-anchored brand underline under the wordmark -->
+  <rect x="94" y="170" width="150" height="6" rx="3" fill="#2EA043"/>
 
-    <!-- pixel dot grid (Y2K / circuit substrate) -->
-    <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
-      <circle cx="1.4" cy="1.4" r="1.4" fill="#1b2740"/>
-    </pattern>
-    <!-- fine pixel grid lines -->
-    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
-      <path d="M44 0 H0 V44" fill="none" stroke="#121a2e" stroke-width="1"/>
-    </pattern>
-    <!-- CRT scanlines -->
-    <pattern id="scan" width="4" height="4" patternUnits="userSpaceOnUse">
-      <rect width="4" height="2" fill="#ffffff" opacity="0.018"/>
-    </pattern>
-  </defs>
+  <!-- ============ POSITIONING LINE (em-dash setup/payoff) ============ -->
+  <text x="94" y="212" font-size="25" font-weight="400" fill="#C9D1D9">A self-healing web scraper <tspan fill="#8B949E">&#8212;</tspan> the LLM writes the crawler once, then your pages run free.</text>
 
-  <!-- ============================================================= -->
-  <!-- LAYER 0 — substrate                                           -->
-  <!-- ============================================================= -->
-  <rect x="0" y="0" width="1200" height="400" rx="16" fill="url(#bg)"/>
-  <rect x="0" y="0" width="1200" height="400" rx="16" fill="url(#grid)"/>
-  <rect x="0" y="0" width="1200" height="400" rx="16" fill="url(#dots)"/>
+  <!-- thin hairline separating identity from the proof strip -->
+  <line x1="94" y1="244" x2="922" y2="244" stroke="#222A35" stroke-width="1"/>
 
-  <!-- ============================================================= -->
-  <!-- LAYER 1 — circuit traces (edges)                              -->
-  <!-- ============================================================= -->
-  <g stroke="url(#trace)" stroke-width="1.5" fill="none" opacity="0.9">
-    <!-- top traces -->
-    <path d="M120 40 H520 a8 8 0 0 1 8 8 V70"/>
-    <path d="M700 40 H980 a8 8 0 0 1 8 8 V96 a8 8 0 0 0 8 8 H1100"/>
-    <path d="M40 120 H96 a8 8 0 0 1 8 8 V200"/>
-    <!-- bottom traces -->
-    <path d="M1160 300 H760 a8 8 0 0 1 -8 8 V348"/>
-    <path d="M120 360 H360 a8 8 0 0 0 8 -8 V300"/>
-    <path d="M1160 250 H1104 a8 8 0 0 1 -8 8 V330"/>
-  </g>
-  <!-- trace node pads -->
-  <g fill="#0d1117" stroke="#2563eb" stroke-width="1.4">
-    <circle cx="120" cy="40" r="3.2"/>
-    <circle cx="528" cy="70" r="3.2"/>
-    <circle cx="700" cy="40" r="3.2"/>
-    <circle cx="1100" cy="104" r="3.2"/>
-    <circle cx="104" cy="200" r="3.2"/>
-    <circle cx="752" cy="348" r="3.2"/>
-    <circle cx="368" cy="300" r="3.2"/>
-    <circle cx="1096" cy="330" r="3.2"/>
-  </g>
-  <!-- lit nodes (data flowing) -->
-  <g fill="#3fb950" filter="url(#glowTiny)">
-    <circle cx="528" cy="70" r="2"/>
-    <circle cx="104" cy="200" r="2"/>
-    <circle cx="368" cy="300" r="2"/>
-  </g>
-
-  <!-- ============================================================= -->
-  <!-- LAYER 2 — the "heal in background" loop (dim, behind wordmark)-->
-  <!--   big regenerating arc on the right; intentionally faint      -->
-  <!-- ============================================================= -->
-  <g transform="translate(1012 158)" opacity="0.62">
-    <!-- ghost track -->
-    <circle r="74" fill="none" stroke="#26215c" stroke-width="13"/>
-    <!-- regenerating sweep (~80% around, leaving the gap the arrow chases) -->
-    <path d="M 0 -74 A 74 74 0 1 1 -52.3 -52.3"
-          fill="none" stroke="url(#loopink)" stroke-width="13" stroke-linecap="round" filter="url(#glowSoft)"/>
-    <!-- arrowhead closing the loop -->
-    <path d="M -52.3 -52.3 l -15 -2 l 8 14 z" fill="#7f77dd" filter="url(#glowSoft)"/>
-    <!-- version ticks v1 → v2 → v3 riding the ring (the version ladder) -->
-    <g font-size="13.5" font-weight="600" text-anchor="middle">
-      <text x="3"  y="-50" fill="#6f77dd">v1</text>
-      <text x="52" y="6"   fill="#8b8fd6">v2</text>
-      <text x="3"  y="62"  fill="#c7c9f7">v3</text>
+  <!-- ============ ONE-LINE STATE STRIP: restraint, not a dashboard ============ -->
+  <!-- three quiet beats tracing the whole story: broken -> served now -> free -->
+  <g font-size="15" font-weight="600">
+    <!-- BEFORE: a redesign breaks it (tiny red footprint, just enough to read the pain) -->
+    <g transform="translate(94,272)">
+      <circle cx="7" cy="13" r="4.5" fill="#F85149"/>
+      <text x="22" y="18" fill="#8B949E">a redesign breaks it</text>
     </g>
-    <!-- center label -->
-    <text x="0" y="-2" text-anchor="middle" font-size="12.5" fill="#8b8fd6">THE</text>
-    <text x="0" y="15" text-anchor="middle" font-size="13" font-weight="700" fill="#a78bfa" letter-spacing="1">LOOP</text>
-  </g>
+    <text x="262" y="290" font-size="16" fill="#30363D" font-weight="400">&#8594;</text>
 
-  <!-- ============================================================= -->
-  <!-- LAYER 3 — WORDMARK : craw · l · oo(loop) · p                  -->
-  <!--   the two o's form a recursive loop = the self-healing Loop   -->
-  <!-- ============================================================= -->
-
-  <!-- subtle prompt path, retro terminal nod -->
-  <text x="120" y="116" font-size="17" fill="#3fb950" opacity="0.85">crawloop@registry</text>
-  <text x="262" y="116" font-size="17" fill="#5c6470">:~$ heal --auto</text>
-
-  <!-- "crawl" -->
-  <g filter="url(#glow)">
-    <text x="118" y="208" font-size="132" font-weight="700" letter-spacing="-3"
-          fill="url(#ink)">crawl</text>
-  </g>
-
-  <!-- chromatic-aberration echo for the Y2K feel (very subtle, behind text) -->
-  <text x="116" y="208" font-size="132" font-weight="700" letter-spacing="-3"
-        fill="#db2777" opacity="0.16">crawl</text>
-  <text x="120" y="208" font-size="132" font-weight="700" letter-spacing="-3"
-        fill="#22d3ee" opacity="0.14">crawl</text>
-
-  <!-- the looping "oo": two regenerating discs (the name literally loops) -->
-  <!-- positions calibrated against the real glyph metrics (overlay test):   -->
-  <!-- o-centers at x=530 / x=605, vertical center y=173, r=34 ≈ the font o.  -->
-  <!-- first o -->
-  <g transform="translate(530 173)" filter="url(#glow)">
-    <circle r="34" fill="none" stroke="#5aa2ff" stroke-width="15" opacity="0.32"/>
-    <path d="M 0 -34 A 34 34 0 1 1 -24.0 -24.0" fill="none" stroke="#5aa2ff"
-          stroke-width="15" stroke-linecap="round"/>
-    <path d="M -24.0 -24.0 l -10 -1 l 5 10 z" fill="#5aa2ff"/>
-  </g>
-  <!-- second o (heal loop, violet, chasing the first) -->
-  <g transform="translate(605 173)" filter="url(#glow)">
-    <circle r="34" fill="none" stroke="#a35bd8" stroke-width="15" opacity="0.32"/>
-    <path d="M 0 -34 A 34 34 0 1 1 -24.0 -24.0" fill="none" stroke="#a35bd8"
-          stroke-width="15" stroke-linecap="round"/>
-    <path d="M -24.0 -24.0 l -10 -1 l 5 10 z" fill="#a35bd8"/>
-  </g>
-
-  <!-- trailing "p" -->
-  <g filter="url(#glow)">
-    <text x="640" y="208" font-size="132" font-weight="700" letter-spacing="-3"
-          fill="url(#ink)">p</text>
-  </g>
-
-  <!-- ============================================================= -->
-  <!-- LAYER 4 — value proposition (the one-liner)                   -->
-  <!-- ============================================================= -->
-  <text x="122" y="262" font-size="25.5" font-weight="500" fill="#e6edf3" letter-spacing="0.2">Compile your LLM scraper into <tspan fill="#3fb950" font-weight="700">free</tspan>, <tspan fill="#a78bfa" font-weight="700">self-healing</tspan> code<tspan fill="#5aa2ff">.</tspan></text>
-
-  <!-- ============================================================= -->
-  <!-- LAYER 5 — the contract cue:  SERVE NOW  →  HEAL (bg)          -->
-  <!-- ============================================================= -->
-  <g transform="translate(122 300)">
-    <!-- serve-now chip (in front, lit) -->
-    <g filter="url(#glowSoft)">
-      <rect x="0" y="0" width="196" height="48" rx="24" fill="#0d1117" stroke="url(#serve)" stroke-width="2"/>
+    <!-- DURING: served now via the LLM (the one amber spotlight beat) -->
+    <g transform="translate(292,272)">
+      <circle cx="7" cy="13" r="4.5" fill="#D29922"/>
+      <text x="22" y="18" fill="#C9D1D9">served instantly via the LLM</text>
     </g>
-    <circle cx="26" cy="24" r="5.5" fill="#3fb950" filter="url(#glowTiny)"/>
-    <circle cx="26" cy="24" r="5.5" fill="#3fb950"/>
-    <text x="44" y="30" font-size="16" font-weight="700" fill="#3fb950" letter-spacing="0.4">SERVE NOW</text>
-    <text x="150" y="30" font-size="16" font-weight="700" fill="#7ee787">· $0</text>
+    <text x="556" y="290" font-size="16" fill="#30363D" font-weight="400">&#8594;</text>
 
-    <!-- connector arrow: serve now → heal in background -->
-    <path d="M204 24 H300" fill="none" stroke="#4f46e5" stroke-width="2" stroke-dasharray="2 6" stroke-linecap="round"/>
-    <path d="M300 24 l -10 -5 l 0 10 z" fill="#4f46e5"/>
-
-    <!-- heal chip (recedes / background) -->
-    <rect x="316" y="2" width="232" height="44" rx="22" fill="#11152a" stroke="#4f46e5" stroke-width="1.6" opacity="0.9"/>
-    <g transform="translate(340 24)">
-      <path d="M 0 -9 A 9 9 0 1 1 -6.4 -6.4" fill="none" stroke="#a78bfa" stroke-width="2.4" stroke-linecap="round"/>
-      <path d="M -6.4 -6.4 l -3.4 -0.4 l 1.8 3.4 z" fill="#a78bfa"/>
+    <!-- AFTER: new crawler promoted, back to $0 (the success green) -->
+    <g transform="translate(586,272)">
+      <circle cx="7" cy="13" r="4.5" fill="#2EA043"/>
+      <text x="22" y="18" fill="#C9D1D9">a fresh crawler is promoted <tspan fill="#8B949E" font-weight="400">&#8212;</tspan> back to <tspan fill="#2EA043" font-weight="700">$0 / page</tspan></text>
     </g>
-    <text x="360" y="29" font-size="15.5" font-weight="600" fill="#c7c9f7">heal in the background</text>
   </g>
 
-  <!-- ============================================================= -->
-  <!-- LAYER 6 — retro status readout (right column)                 -->
-  <!-- ============================================================= -->
-  <g transform="translate(906 300)" font-size="13.5">
-    <rect x="-14" y="-10" width="288" height="76" rx="10" fill="#0a0e1a" stroke="#1b2740" stroke-width="1"/>
-    <text x="0" y="11"><tspan fill="#8b949e">model calls</tspan> <tspan fill="#3fb950" font-weight="700">0</tspan>  <tspan fill="#3fb950" font-weight="700">FREE</tspan></text>
-    <text x="0" y="33"><tspan fill="#8b949e">drift</tspan> <tspan fill="#d29922">detected</tspan> <tspan fill="#5c6470">→</tspan> <tspan fill="#a78bfa">regenerating v3</tspan></text>
-    <text x="0" y="55"><tspan fill="#8b949e">status</tspan> <tspan fill="#3fb950">healthy</tspan> <tspan fill="#5c6470">·</tspan> <tspan fill="#8b949e">byte-reproducible</tspan></text>
-  </g>
+  <!-- ============ HONEST FOOTER: one quiet calibrated, monospaced line ============ -->
+  <text x="94" y="326" font-size="13.5" font-weight="400" fill="#8B949E" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace">working proof of concept  &#183;  532 tests pass offline, no API key  &#183;  falls back to the LLM, never worse</text>
 
-  <!-- ============================================================= -->
-  <!-- LAYER 7 — texture + framing                                   -->
-  <!-- ============================================================= -->
-  <rect x="0" y="0" width="1200" height="400" rx="16" fill="url(#scan)"/>
-  <rect x="0" y="0" width="1200" height="400" rx="16" fill="url(#vignette)"/>
-
-  <!-- retro registration / corner brackets -->
-  <g stroke="#2b3a5e" stroke-width="2" fill="none" opacity="0.9">
-    <path d="M24 44 V24 H44"/>
-    <path d="M1156 24 H1176 V44"/>
-    <path d="M1176 356 V376 H1156"/>
-    <path d="M44 376 H24 V356"/>
+  <!-- ============ RIGHT-EDGE PROOF ANCHOR: the headline number, heaviest weight ============ -->
+  <line x1="970" y1="96" x2="970" y2="264" stroke="#222A35" stroke-width="1"/>
+  <g transform="translate(1106,0)" text-anchor="end" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace">
+    <text x="0" y="150" font-size="86" font-weight="700" fill="#2EA043">$0</text>
+    <text x="0" y="186" font-size="15" font-weight="400" fill="#C9D1D9">per page in steady state</text>
+    <text x="0" y="232" font-size="14" font-weight="400" fill="#8B949E">model calls to serve a page&#160;&#160;<tspan fill="#2EA043" font-weight="700" font-size="20">0</tspan></text>
   </g>
-  <!-- thin inner keyline -->
-  <rect x="6" y="6" width="1188" height="388" rx="12" fill="none" stroke="#1b2740" stroke-width="1"/>
 </svg>

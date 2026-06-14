@@ -1,201 +1,81 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 640" width="860" height="640" role="img" aria-labelledby="t d" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">
-  <title id="t">crawloop — self-heal in 4 beats</title>
-  <desc id="d">Beat 1: crawler v1 serves data FREE with zero model calls. Beat 2: the site is redesigned, selectors are renamed, and v1 breaks. Beat 3: drift is detected — an LLM serves the request now while the Loop regenerates and promotes v2. Beat 4: v2 serves the new layout FREE again with zero model calls.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 540" width="1200" height="540" role="img" aria-labelledby="demo-title demo-desc" preserveAspectRatio="xMidYMid meet" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title id="demo-title">crawloop self-heal cycle</title>
+  <desc id="demo-desc">Three beats from the offline demo. BEFORE: a site redesign breaks the v1 crawler, which now matches zero nodes. DURING: drift is detected, the LLM serves the request immediately and a fresh crawler v2 is written and promoted, costing six model calls this once. AFTER: v2 serves the new layout straight from the registry with zero model calls. The numbers match the real output of selfheal_demo.py.</desc>
 
-  <defs>
-    <!-- ambient glow behind the window -->
-    <radialGradient id="amb" cx="50%" cy="0%" r="120%">
-      <stop offset="0%" stop-color="#1b2233"/>
-      <stop offset="55%" stop-color="#0b0f17"/>
-      <stop offset="100%" stop-color="#070a10"/>
-    </radialGradient>
-    <!-- terminal surface -->
-    <linearGradient id="surf" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0f141d"/>
-      <stop offset="100%" stop-color="#0b0f17"/>
-    </linearGradient>
-    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#1b212b"/>
-      <stop offset="100%" stop-color="#141921"/>
-    </linearGradient>
-    <!-- the loop spine: green -> green via amber/pink/indigo, mirroring the design legend -->
-    <linearGradient id="spine" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%"  stop-color="#3fb950"/>
-      <stop offset="33%" stop-color="#d29922"/>
-      <stop offset="58%" stop-color="#f85149"/>
-      <stop offset="78%" stop-color="#a371f7"/>
-      <stop offset="100%" stop-color="#3fb950"/>
-    </linearGradient>
-    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
-      <path d="M0 0 L10 5 L0 10 z" fill="#6e7681"/>
-    </marker>
-    <marker id="arrG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0 0 L10 5 L0 10 z" fill="#3fb950"/>
-    </marker>
-    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.45"/>
-    </filter>
-  </defs>
+  <!-- self-contained background panel: deliberate on both #0d1117 and #ffffff -->
+  <rect x="0" y="0" width="1200" height="540" rx="20" fill="#0A0C14"/>
+  <rect x="0.75" y="0.75" width="1198.5" height="538.5" rx="19.25" fill="none" stroke="#222A35" stroke-width="1.5"/>
 
-  <!-- backdrop -->
-  <rect width="860" height="640" fill="url(#amb)"/>
+  <!-- ============ HEADER ============ -->
+  <text x="48" y="58" font-size="22" font-weight="700" letter-spacing="-0.4" fill="#C9D1D9">The self-heal cycle</text>
+  <text x="48" y="84" font-size="14.5" font-weight="400" fill="#8B949E">A site redesign, served without an outage <tspan fill="#30363D">&#8212;</tspan> the real output of <tspan font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" fill="#C9D1D9">python examples/selfheal_demo.py</tspan></text>
+  <!-- evidence-column header, right-aligned over the number rail -->
+  <text x="1152" y="58" text-anchor="end" font-size="12" font-weight="400" fill="#8B949E" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace">MODEL CALLS</text>
+  <text x="1152" y="84" text-anchor="end" font-size="12" font-weight="400" fill="#30363D" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace">to serve this page</text>
 
-  <!-- ============ terminal window ============ -->
-  <g filter="url(#soft)">
-    <rect x="24" y="20" width="812" height="600" rx="14" fill="url(#surf)" stroke="#222a35" stroke-width="1"/>
-    <rect x="24" y="20" width="812" height="40" rx="14" fill="url(#bar)"/>
-    <rect x="24" y="46" width="812" height="14" fill="#141921"/>
-    <line x1="24" y1="60" x2="836" y2="60" stroke="#222a35" stroke-width="1"/>
-  </g>
+  <line x1="48" y1="104" x2="1152" y2="104" stroke="#222A35" stroke-width="1"/>
 
-  <!-- traffic lights + title bar -->
-  <circle cx="46" cy="40" r="6" fill="#ff5f56"/>
-  <circle cx="66" cy="40" r="6" fill="#ffbd2e"/>
-  <circle cx="86" cy="40" r="6" fill="#27c93f"/>
-  <text x="430" y="44" text-anchor="middle" fill="#8b949e" font-size="12.5">crawloop — self-heal in 4 beats · offline · no API key</text>
-  <text x="812" y="44" text-anchor="end" fill="#3fb950" font-size="11.5" font-weight="700">$0/page steady state</text>
-
-  <!-- prompt line -->
-  <text x="48" y="88" fill="#6e7681" font-size="13"><tspan fill="#3fb950" font-weight="700">❯</tspan> <tspan fill="#8b949e">python examples/selfheal_demo.py</tspan></text>
-
-  <!-- ============ the loop spine (left rail) ============ -->
-  <!-- runs through all four beat dots; the dashed arc at the bottom closes the loop back to beat 1 -->
-  <line x1="64" y1="128" x2="64" y2="566" stroke="url(#spine)" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+  <!-- the vertical spine the three beats hang from -->
+  <line x1="74" y1="150" x2="74" y2="470" stroke="#222A35" stroke-width="1.5"/>
 
   <!-- =================================================================== -->
-  <!-- BEAT 1 — v1 serves FREE, 0 model calls                              -->
+  <!-- BEAT 1 : BEFORE - redesign breaks v1 (tiny red footprint)            -->
   <!-- =================================================================== -->
   <g>
-    <!-- spine node -->
-    <circle cx="64" cy="128" r="11" fill="#0b0f17" stroke="#3fb950" stroke-width="2.5"/>
-    <text x="64" y="132" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="700">1</text>
+    <circle cx="74" cy="170" r="6" fill="#0A0C14" stroke="#F85149" stroke-width="2.5"/>
+    <text x="108" y="160" font-size="12.5" font-weight="700" letter-spacing="1.5" fill="#F85149">BEFORE</text>
+    <text x="108" y="186" font-size="18" font-weight="600" fill="#C9D1D9">A redesign renames every CSS hook. The old crawler breaks.</text>
 
-    <!-- card -->
-    <rect x="96" y="104" width="724" height="98" rx="10" fill="#0e1a14" stroke="#1f3d2b" stroke-width="1.2"/>
-    <rect x="96" y="104" width="4" height="98" rx="2" fill="#3fb950"/>
-
-    <text x="118" y="130" fill="#3fb950" font-size="14" font-weight="700">v1 SERVES</text>
-    <text x="220" y="130" fill="#6e7681" font-size="12.5">— a generated deterministic crawler is live</text>
-
-    <!-- state chip -->
-    <g>
-      <rect x="690" y="116" width="116" height="22" rx="11" fill="#0d2818" stroke="#238636" stroke-width="1.2"/>
-      <circle cx="704" cy="127" r="3.5" fill="#3fb950"/>
-      <text x="715" y="131" fill="#3fb950" font-size="11.5" font-weight="700">FREE · FAST</text>
+    <!-- selector diff: factual, taken from the demo narration -->
+    <g font-size="13.5" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace">
+      <text x="108" y="214" fill="#8B949E">article.product_pod <tspan fill="#30363D">&#8594;</tspan> <tspan fill="#C9D1D9">div.card</tspan>     .price_color <tspan fill="#30363D">&#8594;</tspan> <tspan fill="#C9D1D9">span.price-box</tspan></text>
     </g>
+    <text x="108" y="238" font-size="14" font-weight="400" fill="#8B949E">v1 still runs, but now matches <tspan fill="#F85149" font-weight="600">0 nodes</tspan>. In a plain pipeline this is a silent outage.</text>
 
-    <text x="118" y="158" fill="#c9d1d9" font-size="12.5">A Light in the Attic · £51.77   Tipping the Velvet · £53.74   Soumission · £50.10</text>
-
-    <!-- footer meta -->
-    <text x="118" y="184" fill="#6e7681" font-size="12">source=<tspan fill="#8b949e">registry v1</tspan>   ·   model calls = <tspan fill="#3fb950" font-weight="700">0</tspan>   ·   latency = <tspan fill="#8b949e">~4 ms</tspan>   ·   cost = <tspan fill="#3fb950" font-weight="700">$0.00</tspan></text>
+    <!-- evidence: not served, broken -->
+    <text x="1152" y="182" text-anchor="end" font-size="40" font-weight="700" fill="#F85149" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace">0</text>
+    <text x="1152" y="206" text-anchor="end" font-size="12" font-weight="400" fill="#8B949E" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace">records: 0 (broken)</text>
   </g>
 
+  <line x1="108" y1="266" x2="1152" y2="266" stroke="#222A35" stroke-width="1" stroke-dasharray="2 4"/>
+
   <!-- =================================================================== -->
-  <!-- BEAT 2 — site redesigned -> selectors renamed -> v1 breaks          -->
+  <!-- BEAT 2 : DURING - serve now + heal (the one amber spotlight)         -->
   <!-- =================================================================== -->
   <g>
-    <circle cx="64" cy="246" r="11" fill="#0b0f17" stroke="#d29922" stroke-width="2.5"/>
-    <text x="64" y="250" text-anchor="middle" fill="#d29922" font-size="11" font-weight="700">2</text>
+    <circle cx="74" cy="300" r="6" fill="#0A0C14" stroke="#D29922" stroke-width="2.5"/>
+    <text x="108" y="298" font-size="12.5" font-weight="700" letter-spacing="1.5" fill="#D29922">DURING</text>
+    <text x="108" y="324" font-size="18" font-weight="600" fill="#C9D1D9">Drift detected. The LLM serves the page now <tspan fill="#8B949E" font-weight="400">&#8212;</tspan> and writes a fresh crawler.</text>
 
-    <rect x="96" y="222" width="724" height="98" rx="10" fill="#1a130c" stroke="#3d2f17" stroke-width="1.2"/>
-    <rect x="96" y="222" width="4" height="98" rx="2" fill="#d29922"/>
-
-    <text x="118" y="248" fill="#d29922" font-size="14" font-weight="700">SITE REDESIGNED</text>
-    <text x="262" y="248" fill="#6e7681" font-size="12.5">— overnight, the selectors are renamed</text>
-
-    <g>
-      <rect x="700" y="234" width="106" height="22" rx="11" fill="#2a1413" stroke="#a13d33" stroke-width="1.2"/>
-      <circle cx="714" cy="245" r="3.5" fill="#f85149"/>
-      <text x="725" y="249" fill="#f85149" font-size="11.5" font-weight="700">v1 BREAKS</text>
+    <!-- two quiet inline facts, no boxes-within-boxes -->
+    <g font-size="14" font-weight="400">
+      <circle cx="116" cy="349" r="3.5" fill="#D29922"/>
+      <text x="130" y="354" fill="#C9D1D9"><tspan font-weight="600">serve now</tspan> <tspan fill="#8B949E">&#8212; an LLM reads the raw HTML and returns this request's records. No outage.</tspan></text>
+    </g>
+    <g font-size="14" font-weight="400">
+      <circle cx="116" cy="377" r="3.5" fill="#2EA043"/>
+      <text x="130" y="382" fill="#C9D1D9"><tspan font-weight="600">heal</tspan> <tspan fill="#8B949E">&#8212; the loop samples pages, grades candidates against an oracle, and</tspan> <tspan fill="#2EA043" font-weight="600">promotes v2</tspan>.</text>
     </g>
 
-    <!-- selector diff -->
-    <text x="118" y="276" font-size="12.5">
-      <tspan fill="#6e7681">article.</tspan><tspan fill="#f85149" text-decoration="line-through">product_pod</tspan><tspan fill="#6e7681"> → div.</tspan><tspan fill="#3fb950">card</tspan><tspan fill="#30363d">      </tspan><tspan fill="#6e7681">.</tspan><tspan fill="#f85149" text-decoration="line-through">price_color</tspan><tspan fill="#6e7681"> → span.</tspan><tspan fill="#3fb950">price-box</tspan>
-    </text>
-
-    <text x="118" y="302" fill="#f85149" font-size="12">v1 now matches <tspan font-weight="700">0 nodes</tspan> — in a plain pipeline this is a <tspan font-weight="700">silent outage</tspan>.</text>
+    <!-- evidence: the one paid moment, with the honest breakdown -->
+    <text x="1152" y="318" text-anchor="end" font-size="40" font-weight="700" fill="#D29922" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace">6</text>
+    <text x="1152" y="342" text-anchor="end" font-size="11.5" font-weight="400" fill="#8B949E" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace">paid once, this request</text>
+    <text x="1152" y="360" text-anchor="end" font-size="11" font-weight="400" fill="#30363D" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace">1 serve + 3 learn + 2 write</text>
   </g>
 
+  <line x1="108" y1="408" x2="1152" y2="408" stroke="#222A35" stroke-width="1" stroke-dasharray="2 4"/>
+
   <!-- =================================================================== -->
-  <!-- BEAT 3 — DRIFT detected -> LLM serves NOW + Loop regenerates -> v2   -->
+  <!-- BEAT 3 : AFTER - free again (the success green end state)            -->
   <!-- =================================================================== -->
   <g>
-    <circle cx="64" cy="392" r="11" fill="#0b0f17" stroke="#a371f7" stroke-width="2.5"/>
-    <text x="64" y="396" text-anchor="middle" fill="#a371f7" font-size="11" font-weight="700">3</text>
+    <circle cx="74" cy="442" r="6" fill="#2EA043" stroke="#2EA043" stroke-width="2.5"/>
+    <text x="108" y="440" font-size="12.5" font-weight="700" letter-spacing="1.5" fill="#2EA043">AFTER</text>
+    <text x="108" y="466" font-size="18" font-weight="600" fill="#C9D1D9">The promoted crawler serves the new layout <tspan fill="#8B949E" font-weight="400">&#8212;</tspan> straight from the registry.</text>
+    <text x="108" y="492" font-size="14" font-weight="400" fill="#8B949E">Same request, healed code, no model call. The site broke and fixed itself.</text>
 
-    <rect x="96" y="340" width="724" height="146" rx="10" fill="#15101f" stroke="#332650" stroke-width="1.2"/>
-    <rect x="96" y="340" width="4" height="146" rx="2" fill="#a371f7"/>
-
-    <text x="118" y="366" fill="#a371f7" font-size="14" font-weight="700">DRIFT DETECTED</text>
-    <text x="258" y="366" fill="#6e7681" font-size="12.5">— validation fails → serve now, heal in the background</text>
-
-    <g>
-      <rect x="688" y="352" width="118" height="22" rx="11" fill="#1c1430" stroke="#6e40c9" stroke-width="1.2"/>
-      <circle cx="702" cy="363" r="3.5" fill="#a371f7"/>
-      <text x="713" y="367" fill="#c8a6ff" font-size="11.5" font-weight="700">SELF-HEALING</text>
-    </g>
-
-    <!-- two parallel tracks: T2 serves NOW (pink/paid) + The Loop regenerates (indigo) -->
-    <!-- left: serve now -->
-    <rect x="118" y="382" width="330" height="86" rx="8" fill="#1b0f1a" stroke="#5e2750" stroke-width="1.1"/>
-    <text x="134" y="404" fill="#db61c2" font-size="12" font-weight="700">SERVE NOW · T2</text>
-    <text x="134" y="424" fill="#c9d1d9" font-size="11.5">an LLM reads the raw HTML and</text>
-    <text x="134" y="440" fill="#c9d1d9" font-size="11.5">returns this request's records —</text>
-    <text x="134" y="458" fill="#6e7681" font-size="11.5">paid once · <tspan fill="#3fb950">no outage, correct data</tspan></text>
-
-    <!-- right: the loop -->
-    <rect x="466" y="382" width="338" height="86" rx="8" fill="#13112b" stroke="#3b357a" stroke-width="1.1"/>
-    <text x="482" y="404" fill="#a371f7" font-size="12" font-weight="700">THE LOOP · regenerate</text>
-    <!-- pipeline chips -->
-    <g font-size="10" font-weight="700">
-      <rect x="482" y="414" width="62" height="18" rx="9" fill="#1c1840" stroke="#4f46e5"/>
-      <text x="513" y="427" text-anchor="middle" fill="#b9b3ff">sample</text>
-      <rect x="550" y="414" width="58" height="18" rx="9" fill="#1c1840" stroke="#4f46e5"/>
-      <text x="579" y="427" text-anchor="middle" fill="#b9b3ff">oracle</text>
-      <rect x="614" y="414" width="66" height="18" rx="9" fill="#1c1840" stroke="#4f46e5"/>
-      <text x="647" y="427" text-anchor="middle" fill="#b9b3ff">codegen</text>
-      <rect x="686" y="414" width="66" height="18" rx="9" fill="#1c1840" stroke="#4f46e5"/>
-      <text x="719" y="427" text-anchor="middle" fill="#b9b3ff">gauntlet</text>
-    </g>
-    <!-- promote result -->
-    <g>
-      <rect x="482" y="440" width="270" height="20" rx="10" fill="#0d2818" stroke="#238636" stroke-width="1.1"/>
-      <text x="496" y="454" fill="#3fb950" font-size="11" font-weight="700">PROMOTE → v2 ✓</text>
-      <text x="600" y="454" fill="#6e7681" font-size="10.5">oracle-graded · gauntlet-passed</text>
-    </g>
-
-    <!-- connector: serve-now and loop -->
-    <line x1="448" y1="425" x2="466" y2="425" stroke="#6e7681" stroke-width="1.3" marker-end="url(#arr)"/>
+    <!-- evidence: zero again -->
+    <text x="1152" y="458" text-anchor="end" font-size="40" font-weight="700" fill="#2EA043" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace">0</text>
+    <text x="1152" y="482" text-anchor="end" font-size="12" font-weight="400" fill="#2EA043" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace">free again</text>
   </g>
-
-  <!-- =================================================================== -->
-  <!-- BEAT 4 — v2 serves the new layout, 0 model calls, FREE AGAIN         -->
-  <!-- =================================================================== -->
-  <g>
-    <circle cx="64" cy="542" r="11" fill="#0b0f17" stroke="#3fb950" stroke-width="2.5"/>
-    <text x="64" y="546" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="700">4</text>
-
-    <rect x="96" y="500" width="724" height="98" rx="10" fill="#0e1a14" stroke="#1f3d2b" stroke-width="1.2"/>
-    <rect x="96" y="500" width="4" height="98" rx="2" fill="#3fb950"/>
-
-    <text x="118" y="526" fill="#3fb950" font-size="14" font-weight="700">v2 SERVES</text>
-    <text x="216" y="526" fill="#6e7681" font-size="12.5">— the self-written crawler parses the new layout</text>
-
-    <g>
-      <rect x="664" y="512" width="142" height="22" rx="11" fill="#0d2818" stroke="#238636" stroke-width="1.2"/>
-      <circle cx="678" cy="523" r="3.5" fill="#3fb950"/>
-      <text x="689" y="527" fill="#3fb950" font-size="11.5" font-weight="700">FREE AGAIN · $0</text>
-    </g>
-
-    <text x="118" y="554" fill="#c9d1d9" font-size="12.5">A Light in the Attic · £51.77   Sharp Objects · £47.82   Tipping the Velvet · £53.74</text>
-
-    <text x="118" y="580" fill="#6e7681" font-size="12">source=<tspan fill="#8b949e">registry v2</tspan>   ·   model calls = <tspan fill="#3fb950" font-weight="700">0</tspan>   ·   latency = <tspan fill="#8b949e">~4 ms</tspan>   ·   cost = <tspan fill="#3fb950" font-weight="700">$0.00</tspan></text>
-  </g>
-
-  <!-- ============ loop-back arc: beat 4 -> beat 1 (every page after, free) ============ -->
-  <path d="M 64 553 C 40 580, 40 150, 64 117" fill="none" stroke="#3fb950" stroke-width="1.6"
-        stroke-dasharray="5 4" opacity="0.85" marker-end="url(#arrG)"/>
-  <text x="34" y="335" fill="#3fb950" font-size="10.5" font-weight="600" transform="rotate(-90 34 335)" opacity="0.95">every page after — free, forever</text>
-
 </svg>
