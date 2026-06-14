@@ -362,7 +362,7 @@ class Engine:
             )
         try:
             items = await direct_extract(
-                html, schema_ref, self._completer, model=self._model
+                html, schema_ref, self._completer, model=self._model, source_url=url
             )
             reason = "drift->fallback"
         except ExtractionFailed as exc:
@@ -493,7 +493,7 @@ class Engine:
             )
         try:
             items = await direct_extract(
-                html, schema, self._completer, model=self._model
+                html, schema, self._completer, model=self._model, source_url=url
             )
             reason = "new family"
         except ExtractionFailed as exc:

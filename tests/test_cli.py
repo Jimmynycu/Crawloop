@@ -227,6 +227,9 @@ def test_crawl_parses_schema_and_json_and_threads_to_request(
     assert payload["family"] == FAMILY
     assert payload["used_version"] == 1
     assert payload["count"] == 1
+    # The actual records must be in the payload — a scraper that returns only a
+    # count is useless. (count stays too, for back-compat.)
+    assert payload["items"] == [{"name": "X"}]
 
 
 def test_crawl_text_output_threads_url_without_schema(seeded, capsys, monkeypatch):

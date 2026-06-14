@@ -23,6 +23,7 @@ pass through untouched ($-placeholders, not ``str.format``).
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 from string import Template
@@ -46,6 +47,13 @@ USER_TEMPLATE = Template((_PROMPTS_DIR / "extract_user.txt").read_text(encoding=
 # Strips an opening ```/```json fence (and the closing ```) some models wrap JSON
 # in despite being told not to. Tolerant of surrounding whitespace.
 _FENCE_RE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$", re.IGNORECASE)
+
+# The oracle / T2 path hands the model the hoisted JSON island with a much larger
+# budget than the default 8000 HTML cap, so a wide 100K+ ``__NEXT_DATA__`` /
+# ``ld+json`` island is read in full (otherwise the gold record is chopped off and
+# the oracle returns empty, starving the regeneration loop). Overridable per-process.
+_ORACLE_JSON_CAP_ENV = "CRAWLER_LOOP_ORACLE_JSON_CAP"
+_DEFAULT_ORACLE_JSON_CAP = 120_000
 
 
 class ExtractionFailed(Exception):
@@ -86,6 +94,8 @@ async def direct_extract(
     *,
     model: str = "anthropic/claude-fable-5",
     max_repairs: int = 1,
+    json_max_chars: int | None = None,
+    source_url: str | None = None,
 ) -> list[dict]:
     """Extract schema-valid records from ``html`` using ``completer`` (T2 / oracle).
 
@@ -104,9 +114,12 @@ async def direct_extract(
     gauntlet scores candidates against is produced by the very same code path
     that serves real extractions.
     """
+    if json_max_chars is None:
+        json_max_chars = int(os.getenv(_ORACLE_JSON_CAP_ENV, str(_DEFAULT_ORACLE_JSON_CAP)))
     base_user = USER_TEMPLATE.safe_substitute(
         schema_json=json.dumps(schema_json(schema_ref)),
-        html=trim_html(html),
+        html=trim_html(html, json_max_chars=json_max_chars),
+        source_url=source_url or "",
     )
 
     last_error = ""

@@ -54,7 +54,7 @@ from pathlib import Path
 from crawloop.contract import FetchContext
 from crawloop.fallback import ExtractionFailed, direct_extract
 from crawloop.hybrid import compute_residual_fields
-from crawloop.llm import Completer
+from crawloop.llm import Completer, escalation_model
 from crawloop.loop.codegen import generate_candidates
 from crawloop.loop.gauntlet import CandidateScore, run_gauntlet
 from crawloop.loop.jsonpath import (
@@ -372,6 +372,49 @@ async def run_loop(
     agreement_bar: float = 0.98,
     now: str | None = None,
 ) -> LoopResult:
+    """Run the regeneration loop with TIERED MODEL ESCALATION (a loop-engineering
+    technique). The first attempt regenerates with ``model``. If it cannot promote
+    — the cheap model's *oracle* is too noisy for the strict gauntlet, or its
+    *codegen* can't clear the bar — and a stronger model exists
+    (:func:`crawloop.llm.escalation_model`), the WHOLE regeneration (oracle +
+    codegen) is retried once with that stronger model. The promoted artifact is
+    still free deterministic code, so the one-time stronger-model cost amortizes.
+    "No samples" is never retried (sampling is HTTP, not the model's fault)."""
+    common = dict(
+        fixtures_dir=fixtures_dir, k=k, max_rounds=max_rounds, n_samples=n_samples,
+        min_oracles=min_oracles, agreement_bar=agreement_bar, now=now,
+    )
+    result = await _run_loop_once(
+        family, seed_urls, ctx, registry, completer, schema_ref, model=model, **common
+    )
+    if result.ok or result.reason == "no samples":
+        return result
+    stronger = escalation_model(model)
+    if stronger is None:
+        return result
+    retried = await _run_loop_once(
+        family, seed_urls, ctx, registry, completer, schema_ref, model=stronger, **common
+    )
+    return retried if retried.ok else result
+
+
+async def _run_loop_once(
+    family: str,
+    seed_urls: list[str],
+    ctx: FetchContext,
+    registry: Registry,
+    completer: Completer,
+    schema_ref: str,
+    *,
+    fixtures_dir: Path,
+    model: str = "anthropic/claude-fable-5",
+    k: int = 2,
+    max_rounds: int = 3,
+    n_samples: int = 3,
+    min_oracles: int = 3,
+    agreement_bar: float = 0.98,
+    now: str | None = None,
+) -> LoopResult:
     """Run the regeneration loop for ``family`` and return its outcome.
 
     See the module docstring for the full pipeline. ``ctx`` is the injected
@@ -405,7 +448,7 @@ async def run_loop(
     usable_oracles: list[list[dict]] = []
     for url, html in samples:
         try:
-            oracle = await direct_extract(html, schema_ref, completer, model=model)
+            oracle = await direct_extract(html, schema_ref, completer, model=model, source_url=url)
         except ExtractionFailed:
             continue  # bad ground truth for this page -> drop it
         usable_samples.append((url, html))
@@ -460,12 +503,8 @@ async def run_loop(
             usable_samples, usable_oracles, schema_ref, prev_source,
             failure_report, completer, model=model, k=k,
         )
-        # Prepend the deterministic candidates in round 1 only (one attempt each —
-        # their output is fixed, so re-scoring them every round buys nothing). Being
-        # FIRST in the list means a deterministic crawler wins ties over LLM
-        # candidates in run_gauntlet's max(): prefer the free, deterministic crawler
-        # when it is as good. The value-path candidate (no LLM call) leads, then the
-        # path-map candidate, then the LLM candidates.
+        # Deterministic candidates lead round 1 only (fixed output; FIRST so a free
+        # deterministic crawler wins ties in run_gauntlet's max()).
         if round_no == 1:
             deterministic = [
                 src for src in (value_path_source, path_map_source) if src is not None
@@ -476,18 +515,13 @@ async def run_loop(
             agreement_bar=agreement_bar,
         )
         if best is not None:
-            # Gate 5 (history cross-check): compare the winner's extraction on one
-            # sample to the family's recent history and RECORD any large
-            # volatile-field moves in the promote audit. Advisory only — it never
-            # blocks promotion (non-fatal at runtime per the design).
+            # Gate 5 (history cross-check): record large volatile-field moves in the
+            # promote audit. Advisory only — never blocks promotion.
             warnings = _history_warnings(
                 registry, family, best.source, usable_samples[0], schema_ref
             )
-            # Hybrid residual set: the fields this deterministic winner systematically
-            # leaves blank vs the oracle (computed from its own per-sample sandbox
-            # output, same engine the gauntlet used). Persisted with the version so the
-            # runtime can tail-fill just those with one small LLM call — [] (a complete
-            # crawler) means zero LLM calls at runtime.
+            # Hybrid residual set: fields this winner leaves blank vs the oracle,
+            # persisted so the runtime tail-fills just those ([] => zero LLM calls).
             residual = _residual_fields(
                 best.source, usable_samples, usable_oracles, schema_ref
             )

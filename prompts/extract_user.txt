@@ -3,6 +3,9 @@ Extract records from the HTML below.
 JSON Schema for one record:
 $schema_json
 
+Page URL (resolve every relative URL or href in your output to an absolute URL against this base):
+$source_url
+
 HTML:
 $html
 

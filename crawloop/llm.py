@@ -17,7 +17,54 @@ network.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Protocol, runtime_checkable
+
+# Supported provider env keys, in preference order. crawloop is provider-agnostic
+# via litellm; the only provider-specific bits are which env var holds the key and
+# a sane default model per provider.
+_PROVIDER_KEYS = ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY")
+_DEFAULT_MODEL_BY_KEY = {
+    "ANTHROPIC_API_KEY": "anthropic/claude-fable-5",
+    "OPENAI_API_KEY": "openai/gpt-4o-mini",
+    "GEMINI_API_KEY": "gemini/gemini-2.0-flash",
+}
+
+
+def has_provider_key(env: Mapping[str, str]) -> bool:
+    """True if any supported LLM provider key is present in ``env``."""
+    return any(env.get(k) for k in _PROVIDER_KEYS)
+
+
+def default_model(env: Mapping[str, str]) -> str:
+    """Pick a sane default model for whichever provider key is present.
+
+    Preference order ANTHROPIC -> OPENAI -> GEMINI. Cheap by default; the
+    regeneration loop escalates to a stronger model only when a candidate cannot
+    clear the gauntlet (see :func:`crawloop.loop.driver.run_loop`). Falls back to
+    the Anthropic default when no key is set (used only once a key exists)."""
+    for key in _PROVIDER_KEYS:
+        if env.get(key):
+            return _DEFAULT_MODEL_BY_KEY[key]
+    return "anthropic/claude-fable-5"
+
+
+# Loop-engineering technique — tiered model escalation. A cheap model is great for
+# the oracle and the fast path, but its codegen may not clear the strict promote
+# gauntlet (>=0.98 per-item agreement, exact count) on a hard multi-record page.
+# When no candidate clears the bar, the loop retries codegen ONCE with a stronger
+# model from this map; the promoted artifact is still free deterministic code, so
+# the one-time stronger-model cost amortizes. None => already top-tier, don't escalate.
+_ESCALATION = {
+    "openai/gpt-4o-mini": "openai/gpt-4o",
+    "anthropic/claude-haiku-4-5": "anthropic/claude-fable-5",
+}
+
+
+def escalation_model(model: str) -> str | None:
+    """The stronger model to retry codegen with, or ``None`` if ``model`` is already
+    top-tier. See :func:`crawloop.loop.driver.run_loop`."""
+    return _ESCALATION.get(model)
 
 
 @runtime_checkable

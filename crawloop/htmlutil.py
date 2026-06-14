@@ -55,7 +55,7 @@ _WS_RE = re.compile(r"\s+")
 _DEFAULT_CAP_ENV = "CRAWLER_LOOP_HTML_CAP"
 
 
-def trim_html(html: str, max_chars: int | None = None) -> str:
+def trim_html(html: str, max_chars: int | None = None, json_max_chars: int | None = None) -> str:
     """Reduce ``html`` to a cheaper-to-tokenize string, capped at ``max_chars``.
 
     Steps:
@@ -72,6 +72,10 @@ def trim_html(html: str, max_chars: int | None = None) -> str:
        as a fallback for fields not in the blob.
     3. Truncate the whole thing to ``max_chars`` (default ``CRAWLER_LOOP_HTML_CAP``
        env, else 8000) — JSON-first, so the cap trims trailing HTML, not the data.
+       If ``json_max_chars`` is given, the hoisted JSON section gets that (larger)
+       budget instead and only the trailing HTML body is held to ``max_chars`` —
+       used by the oracle/T2 path (:func:`crawloop.fallback.direct_extract`) so a
+       wide 100K+ island is read in full rather than chopped at 8000.
 
     Note the runtime crawler always fetches the FULL page, so even if the prompt's
     JSON view is truncated, a generated ``json.loads`` crawler parses the complete
@@ -84,9 +88,13 @@ def trim_html(html: str, max_chars: int | None = None) -> str:
     body = _ANY_SCRIPT_RE.sub("", body)
     body = _COMMENT_RE.sub("", body)
     body = _WS_RE.sub(" ", body).strip()
-    if blobs:
-        prefix = _WS_RE.sub(" ", "[[STRUCTURED-DATA-JSON]] " + " ".join(blobs)).strip()
-        out = f"{prefix} [[HTML]] {body}"
-    else:
-        out = body
-    return out[:max_chars]
+    if not blobs:
+        return body[:max_chars]
+    prefix = _WS_RE.sub(" ", "[[STRUCTURED-DATA-JSON]] " + " ".join(blobs)).strip()
+    if json_max_chars is None:
+        # Legacy: one combined cap, JSON-first so the cap trims trailing HTML.
+        return f"{prefix} [[HTML]] {body}"[:max_chars]
+    # A caller that knows the embedded JSON island is the gold (the oracle / T2)
+    # gives it its OWN, larger budget so a wide 100K+ island survives intact,
+    # while the de-scripted HTML body still gets the smaller ``max_chars`` cap.
+    return f"{prefix[:json_max_chars]} [[HTML]] {body[:max_chars]}"

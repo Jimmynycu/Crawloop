@@ -41,7 +41,7 @@ from pathlib import Path
 from crawloop.access import build_http_client
 from crawloop.config import AppConfig, load_config
 from crawloop.engine import Engine
-from crawloop.llm import Completer, FakeCompleter, LiteLLMCompleter
+from crawloop.llm import Completer, FakeCompleter, LiteLLMCompleter, default_model, has_provider_key
 from crawloop.loop.driver import LoopResult, run_loop
 from crawloop.registry import Registry
 
@@ -76,6 +76,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--fixtures-dir", default=_DEFAULT_FIXTURES_DIR, help="dir for golden fixtures"
+    )
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="LLM model id for litellm (e.g. openai/gpt-4o, anthropic/claude-fable-5, "
+        "gemini/gemini-2.0-flash); default is auto-detected from your provider API key",
     )
 
     # --offline is defined ONCE here and inherited (via parents=) by exactly the
@@ -173,7 +179,7 @@ def _open_registry(args: argparse.Namespace) -> Registry:
 
 def _make_completer(offline: bool) -> Completer:
     """The model adapter: a real :class:`LiteLLMCompleter`, or — when ``offline``
-    (or no ``ANTHROPIC_API_KEY`` is set) — an empty :class:`FakeCompleter`.
+    (or no supported provider API key is set) — an empty :class:`FakeCompleter`.
 
     The FakeCompleter raises if it is ever actually called, which is the point:
     an offline ``crawl`` that genuinely needs the model (a drift/bootstrap that
@@ -181,7 +187,7 @@ def _make_completer(offline: bool) -> Completer:
     happy registry path never calls it, so ``--offline crawl`` of a healthy
     family works with no key.
     """
-    if offline or not os.environ.get("ANTHROPIC_API_KEY"):
+    if offline or not has_provider_key(os.environ):
         return FakeCompleter([])
     return LiteLLMCompleter()
 
@@ -229,6 +235,10 @@ def _build_engine(args: argparse.Namespace, registry: Registry, client) -> Engin
     """
     config: AppConfig = load_config(args.config)
     completer = _make_completer(args.offline)
+    # Provider-agnostic: honor --model / CRAWLOOP_MODEL, else a sane default for
+    # whichever provider key is set (anthropic -> openai -> gemini). See
+    # crawloop.llm.default_model; the loop escalates a weak model on its own.
+    model = getattr(args, "model", None) or os.getenv("CRAWLOOP_MODEL") or default_model(os.environ)
     return Engine(
         config,
         registry,
@@ -236,6 +246,7 @@ def _build_engine(args: argparse.Namespace, registry: Registry, client) -> Engin
         client=client,
         browser_runner=_make_browser_runner(args.offline, config),
         fixtures_dir=Path(args.fixtures_dir),
+        model=model,
         # Offline runs have no model to call, so the hybrid tail-fill is disabled —
         # the fast path stays deterministic-only (the offline completer would raise).
         offline=args.offline,
@@ -373,9 +384,9 @@ def _cmd_audit(args: argparse.Namespace) -> int:
 def _print_request_result(result, *, as_json: bool) -> None:
     """Print a :class:`~crawloop.engine.RequestResult` as text or JSON.
 
-    The JSON view is a flat, machine-readable summary (item ``count`` rather than
-    the full items, plus the loop/recovery fields) so scripts can consume it; the
-    text view is a one-line human summary followed by the items.
+    The JSON view is a flat, machine-readable object carrying the full ``items``
+    (plus a ``count`` and the loop/recovery fields) so scripts can consume the
+    records directly; the text view is a one-line human summary then the items.
     """
     if as_json:
         summary = {
@@ -383,6 +394,7 @@ def _print_request_result(result, *, as_json: bool) -> None:
             "family": result.family,
             "used_version": result.used_version,
             "count": len(result.items),
+            "items": result.items,
             "recovered_strategy": result.recovered_strategy,
             "reason": result.reason,
             "loop": dataclasses.asdict(result.loop) if result.loop is not None else None,
