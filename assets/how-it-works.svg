@@ -2,134 +2,123 @@
   <title id="hiw-title">How crawloop works</title>
   <desc id="hiw-desc">A request is checked against the domain allowlist, routed to its page family, then served by a fast deterministic version-ladder crawler at zero cost. When a site redesign causes drift, an LLM serves the request now while a fresh crawler is regenerated in the background, promoted as a new version, and the family runs free again.</desc>
 
-  <!-- ============ palette (matches docs/design.html) ============
-       io     accent #2563eb  fill #dbeafe  ink #1e40af
-       fast   green  #16a34a  fill #ecfdf5  ink #166534
-       drift  amber  #d97706  fill #fef3c7  ink #92400e
-       llm    pink   #db2777  fill #fdf2f8  ink #9d174d
-       loop   indigo #4f46e5  fill #eef2ff  ink #3730a3
-       gate   slate  #5c6470  fill #f6f8fa  ink #1a1d23
-  -->
-
   <defs>
-    <marker id="aGray"  viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#5c6470"/></marker>
-    <marker id="aGreen" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
-    <marker id="aAmber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#d97706"/></marker>
-    <marker id="aPink"  viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#db2777"/></marker>
-    <marker id="aIndigo" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#4f46e5"/></marker>
+    <marker id="aGray"  viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6e7681"/></marker>
+    <marker id="aGreen" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2EA043"/></marker>
+    <marker id="aAmber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#D29922"/></marker>
+    <marker id="aPink"  viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#db61c2"/></marker>
+    <marker id="aIndigo" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6e6ae0"/></marker>
   </defs>
 
-  <rect x="0" y="0" width="960" height="540" fill="#ffffff"/>
+  <!-- self-contained carbon panel: matches hero.svg / demo.svg, reads on both GitHub themes -->
+  <rect x="0" y="0" width="960" height="540" rx="20" fill="#0A0C14"/>
+  <rect x="0.75" y="0.75" width="958.5" height="538.5" rx="19.25" fill="none" stroke="#222A35" stroke-width="1.5"/>
 
   <!-- ===================== header ===================== -->
-  <text x="40" y="46" font-size="22" font-weight="700" fill="#1a1d23">How it works</text>
-  <text x="40" y="70" font-size="13.5" fill="#5c6470">Serve now, heal in the background &#8212; the whole contract, one request at a time.</text>
+  <text x="40" y="46" font-size="22" font-weight="700" fill="#C9D1D9">How it works</text>
+  <text x="40" y="70" font-size="13.5" fill="#8B949E">Serve now, heal in the background &#8212; the whole contract, one request at a time.</text>
 
   <!-- ===================== HAPPY PATH band ===================== -->
-  <text x="40" y="108" font-size="11.5" font-weight="700" letter-spacing="0.6" fill="#16a34a">FAST PATH &#183; DETERMINISTIC &#183; $0</text>
-  <!-- divider split so the FREE-AGAIN pill (x 330-548) sits cleanly on the row -->
-  <line x1="40" y1="116" x2="322" y2="116" stroke="#e2e6ea" stroke-width="1"/>
-  <line x1="556" y1="116" x2="920" y2="116" stroke="#e2e6ea" stroke-width="1"/>
+  <text x="40" y="108" font-size="11.5" font-weight="700" letter-spacing="0.6" fill="#3fb950">FAST PATH &#183; DETERMINISTIC &#183; $0</text>
+  <line x1="40" y1="116" x2="322" y2="116" stroke="#222A35" stroke-width="1"/>
+  <line x1="556" y1="116" x2="920" y2="116" stroke="#222A35" stroke-width="1"/>
 
-  <!-- 1 · request -->
-  <rect x="40" y="134" width="148" height="66" rx="9" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
-  <text x="114" y="161" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1e40af">Request</text>
-  <text x="114" y="180" text-anchor="middle" font-size="10.5" fill="#1e40af">url + schema</text>
+  <!-- 1 . request -->
+  <rect x="40" y="134" width="148" height="66" rx="9" fill="#0d1c2e" stroke="#1f6feb" stroke-width="1.5"/>
+  <text x="114" y="161" text-anchor="middle" font-size="13.5" font-weight="700" fill="#79c0ff">Request</text>
+  <text x="114" y="180" text-anchor="middle" font-size="10.5" fill="#6ea8e6">url + schema</text>
 
-  <!-- 2 · allowlist -->
-  <rect x="228" y="134" width="148" height="66" rx="9" fill="#f6f8fa" stroke="#5c6470" stroke-width="1.5"/>
-  <text x="302" y="161" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1a1d23">Allowlist</text>
-  <text x="302" y="180" text-anchor="middle" font-size="10.5" fill="#5c6470">authorized? hard gate</text>
+  <!-- 2 . allowlist -->
+  <rect x="228" y="134" width="148" height="66" rx="9" fill="#161b22" stroke="#3d444d" stroke-width="1.5"/>
+  <text x="302" y="161" text-anchor="middle" font-size="13.5" font-weight="700" fill="#C9D1D9">Allowlist</text>
+  <text x="302" y="180" text-anchor="middle" font-size="10.5" fill="#8B949E">authorized? hard gate</text>
 
-  <!-- 3 · route to family -->
-  <rect x="416" y="134" width="148" height="66" rx="9" fill="#f6f8fa" stroke="#5c6470" stroke-width="1.5"/>
-  <text x="490" y="161" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1a1d23">Route</text>
-  <text x="490" y="180" text-anchor="middle" font-size="10.5" fill="#5c6470">url &#8594; page family</text>
+  <!-- 3 . route to family -->
+  <rect x="416" y="134" width="148" height="66" rx="9" fill="#161b22" stroke="#3d444d" stroke-width="1.5"/>
+  <text x="490" y="161" text-anchor="middle" font-size="13.5" font-weight="700" fill="#C9D1D9">Route</text>
+  <text x="490" y="180" text-anchor="middle" font-size="10.5" fill="#8B949E">url &#8594; page family</text>
 
-  <!-- 4 · version-ladder crawler -->
-  <rect x="604" y="130" width="160" height="74" rx="9" fill="#ecfdf5" stroke="#16a34a" stroke-width="1.5"/>
-  <text x="684" y="155" text-anchor="middle" font-size="13.5" font-weight="700" fill="#166534">Version-ladder</text>
-  <text x="684" y="172" text-anchor="middle" font-size="13.5" font-weight="700" fill="#166534">crawler</text>
-  <text x="684" y="191" text-anchor="middle" font-size="10.5" fill="#166534">generated code &#183; ms &#183; $0</text>
+  <!-- 4 . version-ladder crawler -->
+  <rect x="604" y="130" width="160" height="74" rx="9" fill="#0e1a14" stroke="#2EA043" stroke-width="1.5"/>
+  <text x="684" y="155" text-anchor="middle" font-size="13.5" font-weight="700" fill="#3fb950">Version-ladder</text>
+  <text x="684" y="172" text-anchor="middle" font-size="13.5" font-weight="700" fill="#3fb950">crawler</text>
+  <text x="684" y="191" text-anchor="middle" font-size="10.5" fill="#46a860">generated code &#183; ms &#183; $0</text>
 
-  <!-- 5 · structured data -->
-  <rect x="804" y="134" width="116" height="66" rx="9" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
-  <text x="862" y="161" text-anchor="middle" font-size="13" font-weight="700" fill="#1e40af">Records</text>
-  <text x="862" y="180" text-anchor="middle" font-size="10.5" fill="#1e40af">validated &#10003;</text>
+  <!-- 5 . structured data -->
+  <rect x="804" y="134" width="116" height="66" rx="9" fill="#0d1c2e" stroke="#1f6feb" stroke-width="1.5"/>
+  <text x="862" y="161" text-anchor="middle" font-size="13" font-weight="700" fill="#79c0ff">Records</text>
+  <text x="862" y="180" text-anchor="middle" font-size="10.5" fill="#6ea8e6">validated &#10003;</text>
 
   <!-- happy-path arrows -->
-  <line x1="188" y1="167" x2="226" y2="167" stroke="#5c6470" stroke-width="1.6" marker-end="url(#aGray)"/>
-  <line x1="376" y1="167" x2="414" y2="167" stroke="#5c6470" stroke-width="1.6" marker-end="url(#aGray)"/>
-  <line x1="564" y1="167" x2="602" y2="167" stroke="#5c6470" stroke-width="1.6" marker-end="url(#aGray)"/>
-  <line x1="764" y1="167" x2="802" y2="167" stroke="#16a34a" stroke-width="2" marker-end="url(#aGreen)"/>
-  <text x="784" y="160" text-anchor="middle" font-size="9.5" fill="#16a34a">pass</text>
+  <line x1="188" y1="167" x2="226" y2="167" stroke="#6e7681" stroke-width="1.6" marker-end="url(#aGray)"/>
+  <line x1="376" y1="167" x2="414" y2="167" stroke="#6e7681" stroke-width="1.6" marker-end="url(#aGray)"/>
+  <line x1="564" y1="167" x2="602" y2="167" stroke="#6e7681" stroke-width="1.6" marker-end="url(#aGray)"/>
+  <line x1="764" y1="167" x2="802" y2="167" stroke="#2EA043" stroke-width="2" marker-end="url(#aGreen)"/>
+  <text x="784" y="160" text-anchor="middle" font-size="9.5" fill="#3fb950">pass</text>
 
   <!-- ===================== drift trigger ===================== -->
-  <!-- amber elbow: crawler drops down into the heal lane -->
-  <path d="M684 204 L684 250" fill="none" stroke="#d97706" stroke-width="2" marker-end="url(#aAmber)"/>
-  <rect x="612" y="218" width="144" height="20" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="1.2"/>
-  <text x="684" y="232" text-anchor="middle" font-size="10.5" font-weight="700" fill="#92400e">site redesign &#8594; DRIFT</text>
+  <path d="M684 204 L684 250" fill="none" stroke="#D29922" stroke-width="2" marker-end="url(#aAmber)"/>
+  <rect x="612" y="218" width="144" height="20" rx="10" fill="#1a130c" stroke="#D29922" stroke-width="1.2"/>
+  <text x="684" y="232" text-anchor="middle" font-size="10.5" font-weight="700" fill="#e3b341">site redesign &#8594; DRIFT</text>
 
   <!-- ===================== HEAL band (background) ===================== -->
-  <rect x="40" y="262" width="880" height="218" rx="14" fill="#fbfbfd" stroke="#e2e6ea" stroke-width="1.2"/>
-  <text x="62" y="288" font-size="11.5" font-weight="700" letter-spacing="0.6" fill="#3730a3">ON DRIFT &#183; SERVE NOW, HEAL IN THE BACKGROUND</text>
-  <line x1="62" y1="296" x2="898" y2="296" stroke="#e7e9ee" stroke-width="1"/>
+  <rect x="40" y="262" width="880" height="218" rx="14" fill="#10141d" stroke="#222A35" stroke-width="1.2"/>
+  <text x="62" y="288" font-size="11.5" font-weight="700" letter-spacing="0.6" fill="#b9b3ff">ON DRIFT &#183; SERVE NOW, HEAL IN THE BACKGROUND</text>
+  <line x1="62" y1="296" x2="898" y2="296" stroke="#222A35" stroke-width="1"/>
 
-  <!-- A · serve-now via LLM (the immediate answer) -->
-  <rect x="566" y="318" width="200" height="78" rx="9" fill="#fdf2f8" stroke="#db2777" stroke-width="1.5"/>
-  <text x="666" y="345" text-anchor="middle" font-size="13.5" font-weight="700" fill="#9d174d">Serve now via LLM</text>
-  <text x="666" y="364" text-anchor="middle" font-size="10.5" fill="#9d174d">reads raw HTML, same schema</text>
-  <text x="666" y="381" text-anchor="middle" font-size="10.5" fill="#9d174d">no outage &#183; this request answered</text>
+  <!-- A . serve-now via LLM (the immediate answer) -->
+  <rect x="566" y="318" width="200" height="78" rx="9" fill="#1b0f1a" stroke="#db61c2" stroke-width="1.5"/>
+  <text x="666" y="345" text-anchor="middle" font-size="13.5" font-weight="700" fill="#f0a3d6">Serve now via LLM</text>
+  <text x="666" y="364" text-anchor="middle" font-size="10.5" fill="#d68fc4">reads raw HTML, same schema</text>
+  <text x="666" y="381" text-anchor="middle" font-size="10.5" fill="#d68fc4">no outage &#183; this request answered</text>
 
   <!-- drift -> serve now -->
-  <path d="M684 238 L684 270 L666 270 L666 316" fill="none" stroke="#db2777" stroke-width="2" marker-end="url(#aPink)"/>
+  <path d="M684 238 L684 270 L666 270 L666 316" fill="none" stroke="#db61c2" stroke-width="2" marker-end="url(#aPink)"/>
 
   <!-- serve-now feeds the same Records output (it IS the answer, right now) -->
-  <path d="M766 340 L862 340 L862 202" fill="none" stroke="#16a34a" stroke-width="2" stroke-dasharray="1 0" marker-end="url(#aGreen)"/>
-  <text x="824" y="332" text-anchor="middle" font-size="9.5" fill="#16a34a">answers now</text>
+  <path d="M766 340 L862 340 L862 202" fill="none" stroke="#2EA043" stroke-width="2" stroke-dasharray="1 0" marker-end="url(#aGreen)"/>
+  <text x="824" y="332" text-anchor="middle" font-size="9.5" fill="#3fb950">answers now</text>
 
   <!-- enqueue the loop (in the background) -->
-  <path d="M566 357 L470 357" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#aIndigo)"/>
-  <text x="518" y="349" text-anchor="middle" font-size="9.5" fill="#4f46e5">enqueue</text>
+  <path d="M566 357 L470 357" fill="none" stroke="#6e6ae0" stroke-width="2" marker-end="url(#aIndigo)"/>
+  <text x="518" y="349" text-anchor="middle" font-size="9.5" fill="#b9b3ff">enqueue</text>
 
-  <!-- B · THE LOOP regenerate -->
-  <rect x="270" y="318" width="200" height="78" rx="9" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
-  <text x="370" y="343" text-anchor="middle" font-size="13.5" font-weight="700" fill="#3730a3">Regenerate &#8212; The Loop</text>
-  <text x="370" y="362" text-anchor="middle" font-size="10.5" fill="#3730a3">sample &#8594; oracle &#8594; codegen</text>
-  <text x="370" y="379" text-anchor="middle" font-size="10.5" fill="#3730a3">&#8594; gauntlet (test vs oracle)</text>
+  <!-- B . THE LOOP regenerate -->
+  <rect x="270" y="318" width="200" height="78" rx="9" fill="#13112b" stroke="#6e6ae0" stroke-width="2"/>
+  <text x="370" y="343" text-anchor="middle" font-size="13.5" font-weight="700" fill="#b9b3ff">Regenerate &#8212; The Loop</text>
+  <text x="370" y="362" text-anchor="middle" font-size="10.5" fill="#9d97e8">sample &#8594; oracle &#8594; codegen</text>
+  <text x="370" y="379" text-anchor="middle" font-size="10.5" fill="#9d97e8">&#8594; gauntlet (test vs oracle)</text>
 
-  <!-- C · promote v2 -->
-  <rect x="80" y="318" width="150" height="78" rx="9" fill="#ecfdf5" stroke="#16a34a" stroke-width="1.5"/>
-  <text x="155" y="345" text-anchor="middle" font-size="13.5" font-weight="700" fill="#166534">Promote v2</text>
-  <text x="155" y="364" text-anchor="middle" font-size="10.5" fill="#166534">append + reorder</text>
-  <text x="155" y="381" text-anchor="middle" font-size="10.5" fill="#166534">ladder, no overwrite</text>
+  <!-- C . promote v2 -->
+  <rect x="80" y="318" width="150" height="78" rx="9" fill="#0e1a14" stroke="#2EA043" stroke-width="1.5"/>
+  <text x="155" y="345" text-anchor="middle" font-size="13.5" font-weight="700" fill="#3fb950">Promote v2</text>
+  <text x="155" y="364" text-anchor="middle" font-size="10.5" fill="#46a860">append + reorder</text>
+  <text x="155" y="381" text-anchor="middle" font-size="10.5" fill="#46a860">ladder, no overwrite</text>
 
   <!-- loop -> promote -->
-  <path d="M270 357 L232 357" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#aGreen)"/>
-  <text x="251" y="349" text-anchor="middle" font-size="9.5" fill="#16a34a">winner</text>
+  <path d="M270 357 L232 357" fill="none" stroke="#2EA043" stroke-width="2" marker-end="url(#aGreen)"/>
+  <text x="251" y="349" text-anchor="middle" font-size="9.5" fill="#3fb950">winner</text>
 
-  <!-- ===================== promote v2 climbs back to the fast crawler: free again =====================
-       exits Promote v2 on its left, runs up the clear left margin (x=24, left of every box),
-       into the gap above the box row (y=122), then drops onto the crawler's top edge -->
-  <path d="M80 357 L24 357 L24 122 L684 122 L684 128" fill="none" stroke="#16a34a" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#aGreen)"/>
-  <rect x="330" y="111" width="218" height="22" rx="11" fill="#ecfdf5" stroke="#16a34a" stroke-width="1.2"/>
-  <text x="439" y="126" text-anchor="middle" font-size="10.5" font-weight="700" fill="#166534">new active version &#8594; FREE AGAIN &#183; $0</text>
+  <!-- ===================== promote v2 climbs back to the fast crawler: free again ===================== -->
+  <path d="M80 357 L24 357 L24 122 L684 122 L684 128" fill="none" stroke="#2EA043" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#aGreen)"/>
+  <rect x="330" y="111" width="218" height="22" rx="11" fill="#0e1a14" stroke="#2EA043" stroke-width="1.2"/>
+  <text x="439" y="126" text-anchor="middle" font-size="10.5" font-weight="700" fill="#3fb950">new active version &#8594; FREE AGAIN &#183; $0</text>
 
   <!-- ===================== legend ===================== -->
   <g font-size="10.5">
-    <rect x="40" y="500" width="13" height="13" rx="3" fill="#ecfdf5" stroke="#16a34a"/>
-    <text x="59" y="510" fill="#5c6470">fast deterministic path &#183; $0</text>
+    <rect x="40" y="500" width="13" height="13" rx="3" fill="#0e1a14" stroke="#2EA043"/>
+    <text x="59" y="510" fill="#8B949E">fast deterministic path &#183; $0</text>
 
-    <rect x="246" y="500" width="13" height="13" rx="3" fill="#fef3c7" stroke="#d97706"/>
-    <text x="265" y="510" fill="#5c6470">drift detected</text>
+    <rect x="246" y="500" width="13" height="13" rx="3" fill="#1a130c" stroke="#D29922"/>
+    <text x="265" y="510" fill="#8B949E">drift detected</text>
 
-    <rect x="392" y="500" width="13" height="13" rx="3" fill="#fdf2f8" stroke="#db2777"/>
-    <text x="411" y="510" fill="#5c6470">paid LLM &#183; serves now</text>
+    <rect x="392" y="500" width="13" height="13" rx="3" fill="#1b0f1a" stroke="#db61c2"/>
+    <text x="411" y="510" fill="#8B949E">paid LLM &#183; serves now</text>
 
-    <rect x="592" y="500" width="13" height="13" rx="3" fill="#eef2ff" stroke="#4f46e5"/>
-    <text x="611" y="510" fill="#5c6470">self-healing loop (background)</text>
+    <rect x="592" y="500" width="13" height="13" rx="3" fill="#13112b" stroke="#6e6ae0"/>
+    <text x="611" y="510" fill="#8B949E">self-healing loop (background)</text>
 
-    <line x1="828" y1="507" x2="858" y2="507" stroke="#16a34a" stroke-width="2" stroke-dasharray="6 4"/>
-    <text x="864" y="510" fill="#5c6470">promote</text>
+    <line x1="828" y1="507" x2="858" y2="507" stroke="#2EA043" stroke-width="2" stroke-dasharray="6 4"/>
+    <text x="864" y="510" fill="#8B949E">promote</text>
   </g>
 </svg>
