@@ -54,6 +54,12 @@ _FENCE_RE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$", re.IGNORECASE)
 # the oracle returns empty, starving the regeneration loop). Overridable per-process.
 _ORACLE_JSON_CAP_ENV = "CRAWLER_LOOP_ORACLE_JSON_CAP"
 _DEFAULT_ORACLE_JSON_CAP = 120_000
+# ...and the oracle/T2 also needs the de-scripted HTML body in FULL, not the tiny
+# 8000-char default: a real multi-record LISTING page has no JSON island, so the
+# whole page must reach the model or it only sees the first few records (the cap
+# truncated real 20-item pages to ~3, giving the loop wrong ground truth).
+_ORACLE_HTML_CAP_ENV = "CRAWLER_LOOP_ORACLE_HTML_CAP"
+_DEFAULT_ORACLE_HTML_CAP = 200_000
 
 
 class ExtractionFailed(Exception):
@@ -116,9 +122,10 @@ async def direct_extract(
     """
     if json_max_chars is None:
         json_max_chars = int(os.getenv(_ORACLE_JSON_CAP_ENV, str(_DEFAULT_ORACLE_JSON_CAP)))
+    html_max_chars = int(os.getenv(_ORACLE_HTML_CAP_ENV, str(_DEFAULT_ORACLE_HTML_CAP)))
     base_user = USER_TEMPLATE.safe_substitute(
         schema_json=json.dumps(schema_json(schema_ref)),
-        html=trim_html(html, json_max_chars=json_max_chars),
+        html=trim_html(html, max_chars=html_max_chars, json_max_chars=json_max_chars),
         source_url=source_url or "",
     )
 

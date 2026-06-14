@@ -2,7 +2,7 @@
 
 <img src="assets/hero.svg" alt="crawloop — a self-healing web scraper: the LLM writes the crawler once, then your pages run free at $0 per page in steady state" width="100%">
 
-[![Tests](https://img.shields.io/badge/tests-545%20passing-2ea043.svg)](#30-second-quickstart-no-api-key)
+[![Tests](https://img.shields.io/badge/tests-546%20passing-2ea043.svg)](#quickstart)
 [![CI](https://github.com/Jimmynycu/Crawloop/actions/workflows/ci.yml/badge.svg)](https://github.com/Jimmynycu/Crawloop/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
@@ -13,17 +13,21 @@
 
 Stop paying an LLM on every page, and stop scrapers that break silently when a site redesigns. crawloop compiles a cheap deterministic crawler, serves instantly via the LLM the moment one breaks, and regenerates a fresh version in the background — back to $0.
 
-*Working proof of concept — the self-heal loop is proven end-to-end **offline** (545 tests, no key) **and live** against a real model; provider-agnostic via litellm (OpenAI / Anthropic / Gemini, auto-detected); falls back to the LLM when it can't compile a family, never worse.*
+*Working proof of concept — **tested live on a real website**: the loop learns a free deterministic crawler from `books.toscrape.com` over real HTTP, then extracts a *fresh* page for **$0** (no model call). Backed by **546 offline tests**; provider-agnostic via litellm (OpenAI / Anthropic / Gemini, auto-detected); falls back to the LLM when it can't compile a family, never worse.*
 
 - **$0 and milliseconds per page in steady state** — the model is a compiler, not a runtime. It runs *once* to write the crawler, never to serve a request.
 - **A redesign is never an outage and never silent** — drift is detected, the page is served *now* via the LLM, and a new crawler version is promoted automatically.
-- **Prove it in 30 seconds, no API key, no network** — 545 tests pass offline, and one command drives the real engine through break → serve → heal → free.
+- **Tested on a real site, not a toy** — the loop learns a free crawler from **live `books.toscrape.com`** and extracts fresh pages for **$0**; the whole cycle also reproduces offline in ~30s so you can watch the mechanism end-to-end.
 
 ```bash
-python examples/selfheal_demo.py   # no API key, no network
+# Run the loop against a REAL site, then serve fresh pages free (needs a provider key):
+RUN_LIVE_LLM=1 python -m pytest tests/test_live_llm_smoke.py -q   # live end-to-end on books.toscrape.com
+
+# Or watch the full break → serve → heal → free cycle reproduced offline (no key, no network):
+python examples/selfheal_demo.py
 ```
 
-[How it works →](#how-it-works) · [30-second quickstart →](#30-second-quickstart-no-api-key) · [See it heal →](#see-it-heal) · [The tradeoff →](#the-design-tradeoff)
+[How it works →](#how-it-works) · [Quickstart →](#quickstart) · [See it heal →](#see-it-heal) · [The tradeoff →](#the-design-tradeoff)
 
 ---
 
@@ -40,17 +44,25 @@ crawloop flips the model. **The LLM is a compiler and a teacher, not a runtime.*
 
 ---
 
-## 30-second quickstart (no API key)
-
-The flagship demo is the **complete self-heal cycle running entirely offline** — a scripted model and a localhost fixture server, so it needs **no `ANTHROPIC_API_KEY` and no network**. It is the proof that the whole loop works.
+## Quickstart
 
 ```bash
 git clone https://github.com/Jimmynycu/Crawloop.git
 cd Crawloop
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
+```
 
-# Watch the full break → serve → regenerate → reuse → recover cycle, offline:
+**The real-world test.** Point the loop at a *live* website; it samples real pages, the LLM compiles a deterministic crawler, the gauntlet promotes it, and the promoted crawler then extracts a **fresh** real page for **$0** (no model call):
+
+```bash
+RUN_LIVE_LLM=1 OPENAI_API_KEY=sk-...  python -m pytest tests/test_live_llm_smoke.py -q
+# end-to-end on live books.toscrape.com — real HTTP + a real model (a few cents)
+```
+
+**Reproduce the mechanism offline** (no key, no network) — the *same engine*, with a committed cassette standing in for the model, so the whole cycle is deterministic and free to watch:
+
+```bash
 python examples/selfheal_demo.py
 ```
 
@@ -66,7 +78,7 @@ That narrated demo — and the matching end-to-end test ([`tests/test_selfheal_e
 | 6 · **Recover** | a 403 block is hit, the per-domain access ladder escalates, gets through, and **saves the winning strategy** | — |
 
 ```bash
-python -m pytest   # the full suite — 545 tests, all offline, all without a key
+python -m pytest   # the full suite — 546 tests, all offline, all without a key
 ```
 
 > [!NOTE]
@@ -160,7 +172,7 @@ Requires **Python 3.12+**.
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-python -m pytest  # 545 tests, no API key needed
+python -m pytest  # 546 tests, no API key needed
 ```
 
 The access ladder's browser rungs use a real `PlaywrightBrowserRunner` / `StealthBrowserRunner` ([`crawloop/browser.py`](crawloop/browser.py)) that **re-enforces the allowlist on every navigation and in-page redirect** (the browser bypasses the guarded HTTP client, so it gates itself). Install the browser binaries once with `playwright install`. Gated live browser tests live in [`tests/test_browser_live.py`](tests/test_browser_live.py) (`RUN_BROWSER_TESTS=1`).
@@ -294,7 +306,7 @@ Stated candidly — these are the gaps between *"promising POC"* and *"drop-in r
 PRs welcome — especially the open roadmap items above (**oracle reliability on huge JSON islands** and **JSON-first codegen** are the highest-impact right now).
 
 1. Fork, branch, and `pip install -e ".[dev]"`.
-2. Run `python -m pytest` (545 tests, no key needed) and `ruff check .` — both must stay green.
+2. Run `python -m pytest` (546 tests, no key needed) and `ruff check .` — both must stay green.
 3. Add tests for your change; the offline fixture server (`tests/fixture_server/`) lets you exercise the full loop deterministically.
 4. Open a PR describing the behavior change and how you verified it.
 

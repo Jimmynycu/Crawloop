@@ -82,3 +82,57 @@ def test_live_direct_extract_wide_json_island_deep_record():
     items = asyncio.run(direct_extract(html, "Product@1", LiteLLMCompleter(), model=_MODEL))
     assert len(items) >= 1
     assert any("deep_999" in (it.get("url") or "") for it in items)
+
+
+def test_live_real_world_full_loop_promotes_on_books_toscrape():
+    """END-TO-END on a REAL public website over live HTTP (not a fixture).
+
+    The loop learns a free deterministic crawler from real ``books.toscrape.com``
+    detail pages (cheap model, auto-escalating to clear the gauntlet), promotes it,
+    and that crawler then extracts a FRESH real page with ZERO model calls. This is
+    the real-world proof; it needs network + a key, so it is gated like the rest.
+    """
+    import tempfile
+    from pathlib import Path
+
+    from crawloop.access import build_http_client
+    from crawloop.config import load_config
+    from crawloop.engine import Engine
+    from crawloop.llm import LiteLLMCompleter
+    from crawloop.loop.driver import run_loop
+    from crawloop.registry import Registry
+
+    class _NoBrowser:
+        async def render(self, url, *, stealth, wait_for=None, extra_headers=None):
+            raise RuntimeError("no browser needed for this test")
+
+    B = "https://books.toscrape.com/catalogue/"
+
+    async def _run() -> dict:
+        cfg = load_config("authorized_domains.yaml")  # books.toscrape.com is allowlisted
+        tmp = Path(tempfile.mkdtemp(prefix="rw-test-"))
+        reg = Registry(db_path=str(tmp / "reg.db"), crawlers_dir=tmp / "crawlers")
+        seeds = [B + "a-light-in-the-attic_1000/index.html",
+                 B + "tipping-the-velvet_999/index.html",
+                 B + "soumission_998/index.html"]
+        async with build_http_client() as client:
+            eng = Engine(cfg, reg, LiteLLMCompleter(), client=client,
+                         browser_runner=_NoBrowser(), fixtures_dir=tmp / "fix", model=_MODEL)
+            res = await run_loop(
+                "books.toscrape.com/product_detail", seeds, eng._ctx, reg,
+                LiteLLMCompleter(), "Product@1", fixtures_dir=tmp / "fix",
+                model=_MODEL, n_samples=3, min_oracles=2, k=2, max_rounds=3,
+            )
+            assert res.ok, f"the loop did not promote on real pages: {res.reason}"
+            src = reg.active_source("books.toscrape.com/product_detail")
+            ns: dict = {}
+            exec(src, ns)  # loop-generated + gauntlet-passed source
+            cls = next(v for v in ns.values()
+                       if isinstance(v, type) and getattr(v, "family", None))
+            out = await cls().crawl(B + "sharp-objects_997/index.html", eng._ctx)
+            assert len(out.items) == 1
+            return out.items[0]
+
+    rec = asyncio.run(_run())
+    assert rec["name"]  # a real title was extracted, for free, on a fresh real page
+    assert str(rec["url"]).startswith("https://books.toscrape.com/")

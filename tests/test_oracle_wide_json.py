@@ -101,3 +101,27 @@ def test_direct_extract_passes_source_url_into_prompt():
     asyncio.run(direct_extract(html, "Product@1", fake,
                                source_url="http://h/catalogue/page-1.html"))
     assert "http://h/catalogue/page-1.html" in fake.calls[0]["user"]
+
+
+def test_oracle_sees_a_large_html_listing_in_full_not_truncated_at_8000():
+    """A big HTML-only listing (no JSON island) must reach the oracle in full.
+
+    The default 8000-char HTML cap truncated real 20-record pages so the oracle
+    saw only the first ~3 books — wrong ground truth the loop could never match.
+    The oracle/T2 path must send the whole de-scripted page.
+    """
+    from crawloop.llm import FakeCompleter
+
+    cards = "".join(
+        f'<article class="product_pod"><h3><a href="b{i}.html" title="Book {i}">Book {i}</a>'
+        f'</h3><p class="price_color">&pound;{i + 1}.00</p>'
+        f'<p class="availability">In stock</p></article>'
+        for i in range(200)
+    )
+    html = f"<html><body>{cards}</body></html>"
+    assert html.index("Book 199") > 8000  # the last card sits far past the old cap
+    fake = FakeCompleter([json.dumps([{"name": "Book 199", "price": "200.00",
+                                       "in_stock": True, "url": "http://h/b199.html"}])])
+    asyncio.run(direct_extract(html, "Product@1", fake, source_url="http://h/list"))
+    # The deep card must have reached the model's prompt.
+    assert "Book 199" in fake.calls[0]["user"]
