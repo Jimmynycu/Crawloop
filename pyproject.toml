@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crawloop"
-version = "0.1.0"
+version = "0.2.0"
 description = "Self-healing web crawler: compile your LLM scraper into free, deterministic code that auto-heals when a site's layout changes."
 readme = "README.md"
 authors = [{ name = "Jimmynycu" }]
