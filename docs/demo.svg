@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 500" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13.5">
+  <rect width="780" height="500" rx="12" fill="#0d1117"/>
+  <rect width="780" height="38" rx="12" fill="#161b22"/>
+  <rect y="24" width="780" height="14" fill="#161b22"/>
+  <circle cx="22" cy="19" r="6" fill="#ff5f56"/><circle cx="42" cy="19" r="6" fill="#ffbd2e"/><circle cx="62" cy="19" r="6" fill="#27c93f"/>
+  <text x="390" y="24" text-anchor="middle" fill="#8b949e" font-size="12.5">crawloop — self-heal demo · offline · no API key</text>
+  <g>
+    <text x="20" y="68" fill="#8b949e">$ python examples/selfheal_demo.py</text>
+
+    <text x="20" y="104" fill="#58a6ff" font-weight="bold">▸ STEP 1 — crawler v1 is live, serving the listing</text>
+    <text x="20" y="126" fill="#c9d1d9">  A Light in the Attic  £51.77 · Soumission £50.10 · Tipping the Velvet £53.74</text>
+    <text x="20" y="148" fill="#8b949e">  source=registry  v1   ·   model calls = <tspan fill="#3fb950" font-weight="bold">0</tspan>   <tspan fill="#3fb950" font-weight="bold">FREE</tspan></text>
+
+    <text x="20" y="184" fill="#d29922" font-weight="bold">▸ STEP 2 — the site is redesigned overnight</text>
+    <text x="20" y="206" fill="#8b949e">  article.product_pod → div.card   p.price_color → span.price-box</text>
+    <text x="20" y="228" fill="#f85149">  v1 now matches nothing → in a normal pipeline this is a silent outage</text>
+
+    <text x="20" y="264" fill="#58a6ff" font-weight="bold">▸ STEP 3 — engine detects DRIFT: serve now, heal in the background</text>
+    <text x="20" y="286" fill="#c9d1d9">  Records returned during the redesign — <tspan fill="#3fb950">correct, no outage</tspan></text>
+    <text x="20" y="308" fill="#8b949e">  source=fallback   (an LLM read the raw HTML and served this request NOW)</text>
+    <text x="20" y="330" fill="#a371f7">  loop: wrote → sandboxed → validated → promoted   →   v2 ✓</text>
+
+    <text x="20" y="366" fill="#58a6ff" font-weight="bold">▸ STEP 4 — healed: the self-written v2 serves the new layout</text>
+    <text x="20" y="388" fill="#c9d1d9">  A Light in the Attic · Sharp Objects · Soumission · Tipping the Velvet</text>
+    <text x="20" y="410" fill="#8b949e">  source=registry  v2   ·   model calls = <tspan fill="#3fb950" font-weight="bold">0</tspan>   <tspan fill="#3fb950" font-weight="bold">FREE AGAIN</tspan></text>
+
+    <line x1="20" y1="436" x2="760" y2="436" stroke="#21262d"/>
+    <text x="20" y="462" fill="#8b949e">break → serve through it → regenerate → run free again.</text>
+    <text x="20" y="482" fill="#6e7681" font-size="12">no network · no API key · 100% deterministic · self-healing · $0/page steady state</text>
+  </g>
+</svg>

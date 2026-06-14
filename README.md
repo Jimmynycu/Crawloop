@@ -6,10 +6,10 @@
 
 Point it at a page and a schema; it generates a cheap deterministic crawler, serves data instantly via an LLM the moment a redesign breaks it, and regenerates a fresh crawler in the background — so you pay the LLM once, not on every page forever.
 
-<!-- Badges: replace <your-org> once the repo is published. -->
+[![CI](https://github.com/Jimmynycu/Crawloop/actions/workflows/ci.yml/badge.svg)](https://github.com/Jimmynycu/Crawloop/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-514%20passing-brightgreen.svg)](#-30-second-quickstart-no-api-key)
+[![Tests](https://img.shields.io/badge/tests-532%20passing-brightgreen.svg)](#-30-second-quickstart-no-api-key)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-contributing)
 
 **Status — honest:** working proof of concept, not a production scraper. The full self-heal + access-recovery loop is proven end-to-end **offline** (zero API key). The architecture wins by construction on **cost, latency, determinism, and drift-resilience** (see [the design tradeoff](#-the-design-tradeoff) below) and is exact on the high-value core fields it compiles; reproducing a *wide, normalized* schema with deterministic code is the hard, still-open step, and when a family can't be compiled to the bar it safely falls back to the LLM — never worse on output. We'd rather you know that going in.
@@ -36,8 +36,8 @@ crawloop flips the model. **The LLM is a compiler and a teacher, not a runtime.*
 The flagship demo is the **complete self-heal cycle running entirely offline** — a scripted model and a localhost fixture server, so it needs **no `ANTHROPIC_API_KEY` and no network**. It is the proof that the whole loop works.
 
 ```bash
-git clone https://github.com/<your-org>/crawloop.git
-cd crawloop
+git clone https://github.com/Jimmynycu/Crawloop.git
+cd Crawloop
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
@@ -55,7 +55,7 @@ That narrated demo — and the matching end-to-end test ([`tests/test_selfheal_e
 6. **Recover** — a 403 block is hit, the per-domain access ladder escalates and gets through, and the winning strategy is saved.
 
 ```bash
-python -m pytest   # the full suite — 514 tests, all offline, all without a key
+python -m pytest   # the full suite — 532 tests, all offline, all without a key
 ```
 
 > Real runs (against your own authorized sites) need an API key for the T2 fallback and the Loop. The demo above proves the machinery first, for free.
@@ -64,9 +64,9 @@ python -m pytest   # the full suite — 514 tests, all offline, all without a ke
 
 ## 🔧 See it heal
 
-![break → regenerate → free demo](docs/demo.gif)
+![crawloop self-heal demo: break the layout, serve through it, regenerate, run free again](docs/demo.svg)
 
-> _`docs/demo.gif` placeholder — record the offline `pytest tests/test_selfheal_e2e.py -v` run (or a live `crawloop crawl` against the fixture server) showing the three phases below._
+> Run it yourself in ~30s, no API key: **`python examples/selfheal_demo.py`** — the real engine drives the full cycle (a committed cassette stands in for the LLM).
 
 ```
   ┌─────────────┐   site redesigns    ┌──────────────────────┐
@@ -121,7 +121,7 @@ This is the **design tradeoff**, stated up front, not a measured comparison: the
 - **Pluggable Pydantic schemas** — drop a `BaseModel` in [`schemas/`](schemas/); it's auto-registered as `Name@1`. Mark `VOLATILE` fields so the validator compares price/stock tolerantly.
 - **Full audit trail** — every promotion and access recovery is recorded (SQLite + `audit.jsonl`): what the system did, and why, reviewable after the fact.
 - **Provider-agnostic** — model calls go through [litellm](https://github.com/BerriAI/litellm); codegen/oracle/judge model ids are config-swappable.
-- **Proven offline** — 514 tests, a scripted model, and a controllable fixture server: the whole loop is exercised with **no API key and no network**.
+- **Proven offline** — 532 tests, a scripted model, and a controllable fixture server: the whole loop is exercised with **no API key and no network**.
 
 ---
 
@@ -140,7 +140,7 @@ Requires **Python 3.12+**.
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-python -m pytest  # 514 tests, no API key needed
+python -m pytest  # 532 tests, no API key needed
 ```
 
 The access ladder's browser rungs use a real `PlaywrightBrowserRunner` / `StealthBrowserRunner` ([`crawloop/browser.py`](crawloop/browser.py)) that **re-enforces the allowlist on every navigation and in-page redirect** (the browser bypasses the guarded HTTP client, so it gates itself). Install the browser binaries once: `playwright install`. Gated live browser tests are in [`tests/test_browser_live.py`](tests/test_browser_live.py) (`RUN_BROWSER_TESTS=1`).
@@ -269,7 +269,7 @@ Stated candidly — these are the gaps between "promising POC" and "drop-in repl
 PRs welcome — especially the open roadmap items above (**oracle reliability on huge JSON islands** and **JSON-first codegen robustness** are the highest-impact right now). Good first steps:
 
 1. Fork, branch, and `pip install -e ".[dev]"`.
-2. Run `python -m pytest` (514 tests, no key needed) and `ruff check .` — both must stay green.
+2. Run `python -m pytest` (532 tests, no key needed) and `ruff check .` — both must stay green.
 3. Add tests for your change; the offline fixture server (`tests/fixture_server/`) lets you exercise the full loop deterministically.
 4. Open a PR describing the behavior change and how you verified it.
 

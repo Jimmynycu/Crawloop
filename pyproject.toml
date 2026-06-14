@@ -5,6 +5,19 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "crawloop"
 version = "0.0.1"
+description = "Self-healing web crawler: compile your LLM scraper into free, deterministic code that auto-heals when a site's layout changes."
+readme = "README.md"
+authors = [{ name = "Jimmynycu" }]
+keywords = ["web-scraping","web-crawler","scraper","llm","ai","data-extraction","structured-data","self-healing","codegen","playwright"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+  "Topic :: Software Development :: Code Generators",
+]
 requires-python = ">=3.12"
 dependencies = [
   "httpx>=0.27", "parsel>=1.9", "pydantic>=2.7", "pyyaml>=6",
@@ -29,3 +42,8 @@ line-length = 100
 # schemas/ is intentionally NOT packaged: it is discovered at runtime by path.
 [tool.setuptools.packages.find]
 include = ["crawloop*"]
+
+[project.urls]
+Homepage = "https://github.com/Jimmynycu/Crawloop"
+Repository = "https://github.com/Jimmynycu/Crawloop"
+Issues = "https://github.com/Jimmynycu/Crawloop/issues"
