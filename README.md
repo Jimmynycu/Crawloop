@@ -1,18 +1,32 @@
 <div align="center">
 
-# crawloop
+<img src="assets/hero.svg" alt="crawloop — compile your LLM scraper into free, deterministic, self-healing code" width="100%">
 
-### Compile your LLM scraper into free, deterministic, self-healing code.
+<br>
 
-Point it at a page and a schema; it generates a cheap deterministic crawler, serves data instantly via an LLM the moment a redesign breaks it, and regenerates a fresh crawler in the background — so you pay the LLM once, not on every page forever.
-
+<!-- badges -->
 [![CI](https://github.com/Jimmynycu/Crawloop/actions/workflows/ci.yml/badge.svg)](https://github.com/Jimmynycu/Crawloop/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![Tests](https://img.shields.io/badge/tests-532%20passing-brightgreen.svg)](#-30-second-quickstart-no-api-key)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-contributing)
 
-**Status — honest:** working proof of concept, not a production scraper. The full self-heal + access-recovery loop is proven end-to-end **offline** (zero API key). The architecture wins by construction on **cost, latency, determinism, and drift-resilience** (see [the design tradeoff](#-the-design-tradeoff) below) and is exact on the high-value core fields it compiles; reproducing a *wide, normalized* schema with deterministic code is the hard, still-open step, and when a family can't be compiled to the bar it safely falls back to the LLM — never worse on output. We'd rather you know that going in.
+<br>
+
+### Compile your LLM scraper into free, deterministic, self-healing code.
+
+Point it at a page and a schema. It generates a **cheap deterministic crawler**, serves data **instantly via an LLM** the moment a redesign breaks it, and **regenerates a fresh crawler in the background** — so you pay the LLM once, not on every page forever.
+
+</div>
+
+> [!IMPORTANT]
+> **Status — honest:** working proof of concept, not a production scraper. The full self-heal + access-recovery loop is proven end-to-end **offline** (zero API key). The architecture wins by construction on **cost, latency, determinism, and drift-resilience** (see [the design tradeoff](#-the-design-tradeoff)) and is exact on the high-value core fields it compiles; reproducing a *wide, normalized* schema with deterministic code is the hard, still-open step, and when a family can't be compiled to the bar it safely falls back to the LLM — never worse on output. We'd rather you know that going in.
+
+<br>
+
+<div align="center">
+
+[**30-second quickstart**](#-30-second-quickstart-no-api-key) · [**How it works**](#-how-it-works) · [**See it heal**](#-see-it-heal) · [**The tradeoff**](#-the-design-tradeoff) · [**Features**](#-features) · [**Roadmap**](#-roadmap)
 
 </div>
 
@@ -20,7 +34,7 @@ Point it at a page and a schema; it generates a cheap deterministic crawler, ser
 
 ## 🤔 Why this exists
 
-LLM-per-page scrapers are seductive — point a model at HTML, get JSON. But in production they have two structural problems that never go away:
+LLM-per-page scrapers are seductive — point a model at HTML, get JSON. But in production they have **two structural problems that never go away**:
 
 - **You pay per page, forever.** Every page, every re-crawl, every run hits the model. At a few cents a page that's real money at scale — and unlike code, the bill never amortizes. Crawl a million pages and you pay a million times.
 - **They break silently.** When a site redesigns, an LLM doesn't *know* it broke. It confidently extracts the wrong thing (or nothing) at the same hardcoded confidence score. There is no drift signal — you find out from downstream garbage, days later.
@@ -31,7 +45,7 @@ crawloop flips the model. **The LLM is a compiler and a teacher, not a runtime.*
 
 ---
 
-## ⚡ 30-second QUICKSTART (no API key)
+## ⚡ 30-second quickstart (no API key)
 
 The flagship demo is the **complete self-heal cycle running entirely offline** — a scripted model and a localhost fixture server, so it needs **no `ANTHROPIC_API_KEY` and no network**. It is the proof that the whole loop works.
 
@@ -45,26 +59,56 @@ pip install -e ".[dev]"
 python examples/selfheal_demo.py
 ```
 
-That narrated demo — and the matching end-to-end test ([`tests/test_selfheal_e2e.py`](tests/test_selfheal_e2e.py)) — drives the real engine through:
+That narrated demo — and the matching end-to-end test ([`tests/test_selfheal_e2e.py`](tests/test_selfheal_e2e.py)) — drives the **real engine** through:
 
-1. **Fast path** — a healthy generated crawler extracts records with **no LLM call**.
-2. **Break** — the fixture site's layout is mutated (a simulated redesign).
-3. **Serve now** — the drift is detected and the page is served *immediately* via the T2 LLM fallback (here a scripted model) against the schema.
-4. **Heal** — the regeneration Loop samples pages, uses the LLM as an oracle, generates & gauntlet-scores candidates, and **promotes a v2** that parses the new layout.
-5. **Reuse** — the next request runs the healed crawler — free again.
-6. **Recover** — a 403 block is hit, the per-domain access ladder escalates and gets through, and the winning strategy is saved.
+| Step | What happens | Cost |
+|------|--------------|------|
+| 1 · **Fast path** | a healthy generated crawler extracts records with no LLM call | **$0** |
+| 2 · **Break** | the fixture site's layout is mutated (a simulated redesign) | — |
+| 3 · **Serve now** | drift is detected; the page is served *immediately* via the T2 LLM fallback against the schema | paid, once |
+| 4 · **Heal** | the Loop samples pages, uses the LLM as an oracle, gauntlet-scores candidates, and **promotes a v2** | paid, once |
+| 5 · **Reuse** | the next request runs the healed crawler | **$0 again** |
+| 6 · **Recover** | a 403 block is hit, the per-domain access ladder escalates, gets through, and **saves the winning strategy** | — |
 
 ```bash
 python -m pytest   # the full suite — 532 tests, all offline, all without a key
 ```
 
+> [!NOTE]
 > Real runs (against your own authorized sites) need an API key for the T2 fallback and the Loop. The demo above proves the machinery first, for free.
+
+---
+
+## ⚙️ How it works
+
+A request flows through a **version ladder of cheap deterministic crawlers** first; the LLM is only ever reached on a real breakage.
+
+<div align="center">
+
+<img src="assets/how-it-works.svg" alt="How crawloop routes a request: authorize, route to a page family, run its version ladder of generated crawlers; on failure, classify and either serve via the LLM while regenerating, or escalate the access ladder" width="100%">
+
+</div>
+
+**Authorize** (allowlist gate) → **route** to a registered page *family* → run that family's **version ladder** of generated crawlers (the cheap, fast path). If a version validates, items are served with **no LLM call**.
+
+If every version fails, the failure is **classified**:
+
+- **Drift** → served *now* by **T2** (the LLM reading the HTML against the schema) while the **regeneration Loop** rebuilds a crawler in the background.
+- **Block** (429 / login wall / anti-bot) → the **access-recovery** ladder escalates and retries.
+- **Transient** error → retried.
+- **Gone** (404/410) → stops.
+
+> 📐 **See the full runtime architecture → [docs/design.html#arch](docs/design.html#arch)** — tiers T0/T1/T2/Loop/Access, the two self-healing loops, and the safety model.
 
 ---
 
 ## 🔧 See it heal
 
-![crawloop self-heal demo: break the layout, serve through it, regenerate, run free again](docs/demo.svg)
+<div align="center">
+
+<img src="assets/demo.svg" alt="crawloop self-heal demo: break the layout, serve through it, regenerate, run free again" width="100%">
+
+</div>
 
 > Run it yourself in ~30s, no API key: **`python examples/selfheal_demo.py`** — the real engine drives the full cycle (a committed cassette stands in for the LLM).
 
@@ -90,13 +134,13 @@ python -m pytest   # the full suite — 532 tests, all offline, all without a ke
                                           └────────────────────┘
 ```
 
-The break is never an outage and never silent: the user keeps getting data (paid, briefly), the system *knows* it drifted, and within minutes it's back to free deterministic extraction — automatically, with every promotion written to an audit trail.
+The break is **never an outage and never silent**: the user keeps getting data (paid, briefly), the system *knows* it drifted, and within minutes it's back to free deterministic extraction — automatically, with every promotion written to an audit trail.
 
 ---
 
 ## 📊 The design tradeoff
 
-The table below contrasts the two **architectures** — not a benchmark, no measured numbers from any system. It is the structural argument for compiling a crawler instead of calling an LLM on every page; the axes follow directly from "code runs vs a model runs" and from "the system has a drift signal vs it doesn't."
+The table below contrasts the two **architectures** — not a benchmark, no measured numbers from any system. It is the structural argument for compiling a crawler instead of calling an LLM on every page; the axes follow directly from *"code runs vs a model runs"* and from *"the system has a drift signal vs it doesn't."*
 
 | Dimension | crawloop | Generic LLM-per-page | Why |
 |---|---|---|---|
@@ -106,30 +150,86 @@ The table below contrasts the two **architectures** — not a benchmark, no meas
 | **Drift handling** | detects validation drift → self-heals | no signal; ships wrong data blind | crawloop validates each extraction and knows when it broke |
 | **Worst case** | safely falls back to the LLM = parity | — | a family it can't compile is served by the LLM, never worse |
 
-This is the **design tradeoff**, stated up front, not a measured comparison: the win is structural (one-time compile vs per-page-forever, code vs round-trip, deterministic vs variable, self-healing vs silent). The honest counterpoint: reproducing a *wide, normalized, deeply-nested* schema with deterministic code is the hard, still-open step — and when crawloop can't compile a family to the bar, it falls back to the LLM, spending only the one-time bootstrap.
+This is the **design tradeoff**, stated up front, not a measured comparison: the win is structural (one-time compile vs per-page-forever, code vs round-trip, deterministic vs variable, self-healing vs silent).
+
+> **Honest counterpoint:** reproducing a *wide, normalized, deeply-nested* schema with deterministic code is the hard, still-open step — and when crawloop can't compile a family to the bar, it falls back to the LLM, spending only the one-time bootstrap.
 
 ---
 
 ## ✨ Features
 
-- **Compile-once extraction** — LLM-generated deterministic Python crawlers; steady-state runs at **$0 and milliseconds** per page.
-- **Self-healing on drift** — layout change → instant LLM fallback **+** background regeneration of a new crawler version. No outage, no silence.
-- **Version ladder, not overwrite** — each family keeps an ordered `v1, v2, v3…` of immutable crawlers; healing *appends* a version and flips the active pointer (handles gradual redesigns & A/B layouts), with one-command rollback.
-- **Access recovery** — 429 / login wall / anti-bot block isn't terminal: an ordered, per-domain strategy ladder (backoff → stealth browser → session → bypass token) escalates until one gets through, and the **winning strategy is saved** and reused.
-- **Hard allowlist, enforced on every hop** — no URL outside [`authorized_domains.yaml`](authorized_domains.yaml) can ever be fetched; cross-host/SSRF redirects are refused.
-- **Generated code is sandboxed** — every candidate crawler is **AST-checked** (import/call allowlist, no dunder escapes) and run in a resource-capped subprocess before it can ever touch a real page.
-- **Pluggable Pydantic schemas** — drop a `BaseModel` in [`schemas/`](schemas/); it's auto-registered as `Name@1`. Mark `VOLATILE` fields so the validator compares price/stock tolerantly.
-- **Full audit trail** — every promotion and access recovery is recorded (SQLite + `audit.jsonl`): what the system did, and why, reviewable after the fact.
-- **Provider-agnostic** — model calls go through [litellm](https://github.com/BerriAI/litellm); codegen/oracle/judge model ids are config-swappable.
-- **Proven offline** — 532 tests, a scripted model, and a controllable fixture server: the whole loop is exercised with **no API key and no network**.
+<table>
+<tr>
+<td width="50%" valign="top">
 
----
+#### 💸 Compile-once extraction
+LLM-generated deterministic Python crawlers; steady-state runs at **$0 and milliseconds** per page.
 
-## 🏗️ Architecture in one diagram
+</td>
+<td width="50%" valign="top">
 
-A request flows: **authorize** (allowlist gate) → **route** to a registered page *family* → run that family's **version ladder** of generated crawlers (the cheap, fast path). If a version validates, items are served with **no LLM call**. If every version fails, the failure is **classified** — a *drift* is served now by **T2** (LLM reading the HTML against the schema) while the **regeneration Loop** rebuilds a crawler; a *block* escalates the **access-recovery** ladder and retries; a *transient* error is retried; a *gone* (404/410) page stops.
+#### 🔧 Self-healing on drift
+Layout change → instant LLM fallback **+** background regeneration of a new crawler version. No outage, no silence.
 
-> 📐 **See the full runtime architecture diagram → [docs/design.html#arch](docs/design.html#arch)** (tiers T0/T1/T2/Loop/Access, the two self-healing loops, and the safety model).
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+#### 🪜 Version ladder, not overwrite
+Each family keeps an ordered `v1, v2, v3…` of immutable crawlers; healing *appends* a version and flips the active pointer (handles gradual redesigns & A/B layouts), with one-command rollback.
+
+</td>
+<td width="50%" valign="top">
+
+#### 🔓 Access recovery
+A 429 / login wall / anti-bot block isn't terminal: an ordered, per-domain ladder (backoff → stealth browser → session → bypass token) escalates until one gets through, and the **winning strategy is saved** and reused.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+#### 🛡️ Hard allowlist, enforced on every hop
+No URL outside [`authorized_domains.yaml`](authorized_domains.yaml) can ever be fetched; cross-host/SSRF redirects are refused.
+
+</td>
+<td width="50%" valign="top">
+
+#### 📦 Generated code is sandboxed
+Every candidate crawler is **AST-checked** (import/call allowlist, no dunder escapes) and run in a resource-capped subprocess before it can ever touch a real page.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+#### 🧩 Pluggable Pydantic schemas
+Drop a `BaseModel` in [`schemas/`](schemas/); it's auto-registered as `Name@1`. Mark `VOLATILE` fields so the validator compares price/stock tolerantly.
+
+</td>
+<td width="50%" valign="top">
+
+#### 🧾 Full audit trail
+Every promotion and access recovery is recorded (SQLite + `audit.jsonl`): what the system did, and why, reviewable after the fact.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+#### 🔌 Provider-agnostic
+Model calls go through [litellm](https://github.com/BerriAI/litellm); codegen/oracle/judge model ids are config-swappable.
+
+</td>
+<td width="50%" valign="top">
+
+#### ✅ Proven offline
+532 tests, a scripted model, and a controllable fixture server: the whole loop is exercised with **no API key and no network**.
+
+</td>
+</tr>
+</table>
 
 ---
 
@@ -145,7 +245,9 @@ python -m pytest  # 532 tests, no API key needed
 
 The access ladder's browser rungs use a real `PlaywrightBrowserRunner` / `StealthBrowserRunner` ([`crawloop/browser.py`](crawloop/browser.py)) that **re-enforces the allowlist on every navigation and in-page redirect** (the browser bypasses the guarded HTTP client, so it gates itself). Install the browser binaries once: `playwright install`. Gated live browser tests are in [`tests/test_browser_live.py`](tests/test_browser_live.py) (`RUN_BROWSER_TESTS=1`).
 
-**Environment variables** — no secret is ever stored in the repo or config; the config only *names* the env var to read.
+#### 🔑 Environment variables
+
+No secret is ever stored in the repo or config; the config only *names* the env var to read.
 
 - **`ANTHROPIC_API_KEY`** (or your provider's key) — required for *real* runs (T2 fallback + the Loop call the model via litellm). Not needed for the test suite or for `--offline` on a healthy family.
 - **Per-domain credentials / tokens** — named by the `*_env` fields in `access_strategies` (e.g. `session` → `creds_env`, `bypass_token` → `value_env`, `proxy_env`), read from the environment at fetch time.
@@ -241,26 +343,32 @@ This is a tool for crawling sites **you own or are explicitly authorized to craw
 - **The CAPTCHA rung is opt-in and authorized-domains-only.** The system never auto-defeats a captcha: `captcha_solver` raises unless an operator has explicitly set `authorized: true` for that domain *and* wired a provider (none ships here). Stealth browser and bypass tokens are likewise explicit per-domain opt-ins — courtesy headers and rate limits are the default, not evasion.
 - **Audit trail.** Every promotion and access recovery is recorded so what the system did, and why, is reviewable.
 
-> If you would not be comfortable explaining a crawl to the site's owner, it does not belong on the allowlist.
+> ⚠️ If you would not be comfortable explaining a crawl to the site's owner, it does not belong on the allowlist.
 
 ---
 
 ## 🗺️ Roadmap
 
-Stated candidly — these are the gaps between "promising POC" and "drop-in replacement."
+Stated candidly — these are the gaps between *"promising POC"* and *"drop-in replacement."*
 
-- **Oracle reliability on huge JSON islands** *(the current blocker)* — the bootstrap oracle (the LLM "teacher") returns empty too often when it has to read a 100K+ minified `__NEXT_DATA__` blob (a record buried tens of thousands of bytes deep in a six-figure-byte island), which prevents the loop from promoting + tail-filling end-to-end on those sites. Smarter JSON slicing for the oracle is the next thing to harden — it's what unblocks the hybrid's live completeness demo.
+**🚧 Current blocker**
 
-**Recently landed** (built this cycle, tests green):
-- ✅ **Core-deterministic + LLM-tail hybrid** ([`crawloop/hybrid.py`](crawloop/hybrid.py)) — the deterministic crawler fills the core for free; one small LLM call fills only the residual fields it leaves blank (**$0 when there are none**), merged into a complete record. Mechanism proven offline; live demo on giant-JSON sites awaits the oracle-reliability fix above.
-- ✅ **Real `BrowserRunner`** ([`crawloop/browser.py`](crawloop/browser.py), Playwright + Patchright) — the `browser`/`stealth_browser` rungs and JS-rendered pages work, with the allowlist re-enforced on every navigation/redirect (verified by live browser tests).
-- ✅ **Wheel packaging** — a clean wheel now ships every subpackage (incl. `crawloop.loop`).
+- **Oracle reliability on huge JSON islands** — the bootstrap oracle (the LLM "teacher") returns empty too often when it has to read a 100K+ minified `__NEXT_DATA__` blob (a record buried tens of thousands of bytes deep in a six-figure-byte island), which prevents the loop from promoting + tail-filling end-to-end on those sites. Smarter JSON slicing for the oracle is the next thing to harden — it's what unblocks the hybrid's live completeness demo.
+
+**✅ Recently landed** (built this cycle, tests green)
+
+- **Core-deterministic + LLM-tail hybrid** ([`crawloop/hybrid.py`](crawloop/hybrid.py)) — the deterministic crawler fills the core for free; one small LLM call fills only the residual fields it leaves blank (**$0 when there are none**), merged into a complete record. Mechanism proven offline; live demo on giant-JSON sites awaits the oracle-reliability fix above.
+- **Real `BrowserRunner`** ([`crawloop/browser.py`](crawloop/browser.py), Playwright + Patchright) — the `browser`/`stealth_browser` rungs and JS-rendered pages work, with the allowlist re-enforced on every navigation/redirect (verified by live browser tests).
+- **Wheel packaging** — a clean wheel now ships every subpackage (incl. `crawloop.loop`).
+
+**🔭 Next up**
+
 - **JSON-first codegen** — try a page's embedded JSON island (`ld+json` / `__NEXT_DATA__`) before DOM selectors. On sites that ship a complete JSON island this gives 100%-deterministic extraction; generalizing it should rescue harder families.
 - **Enforce `respect_robots`** — the flag is parsed but currently has no downstream effect.
 - **Schema-width-aware defaults** — so the promote bar and HTML trimming don't need per-target hand-tuning.
 - **PyPI publish & live-model smoke test** — a clean wheel now builds and ships every subpackage (verified incl. `crawloop.loop`); what remains is publishing to PyPI and a real-model smoke test (the LLM path is currently exercised via a scripted stub).
 
-**Intentionally out of scope** for this POC (Phase 2): non-LLM fingerprint healing (T1), DOM-shingle family routing + structural-drift early alarm, sampled production LLM-judge, distribution monitors + scheduled canaries, a web dashboard, Postgres, and concurrency hardening.
+**🚫 Intentionally out of scope** for this POC (Phase 2): non-LLM fingerprint healing (T1), DOM-shingle family routing + structural-drift early alarm, sampled production LLM-judge, distribution monitors + scheduled canaries, a web dashboard, Postgres, and concurrency hardening.
 
 ---
 
@@ -274,6 +382,8 @@ PRs welcome — especially the open roadmap items above (**oracle reliability on
 4. Open a PR describing the behavior change and how you verified it.
 
 Found a bug or have a design question? Open an issue. If you're reporting an extraction gap, a link to the page (one you're authorized to share) and the schema helps enormously.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
 ---
 

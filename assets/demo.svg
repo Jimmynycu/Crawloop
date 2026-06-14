@@ -1,0 +1,201 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 640" width="860" height="640" role="img" aria-labelledby="t d" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">
+  <title id="t">crawloop — self-heal in 4 beats</title>
+  <desc id="d">Beat 1: crawler v1 serves data FREE with zero model calls. Beat 2: the site is redesigned, selectors are renamed, and v1 breaks. Beat 3: drift is detected — an LLM serves the request now while the Loop regenerates and promotes v2. Beat 4: v2 serves the new layout FREE again with zero model calls.</desc>
+
+  <defs>
+    <!-- ambient glow behind the window -->
+    <radialGradient id="amb" cx="50%" cy="0%" r="120%">
+      <stop offset="0%" stop-color="#1b2233"/>
+      <stop offset="55%" stop-color="#0b0f17"/>
+      <stop offset="100%" stop-color="#070a10"/>
+    </radialGradient>
+    <!-- terminal surface -->
+    <linearGradient id="surf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f141d"/>
+      <stop offset="100%" stop-color="#0b0f17"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1b212b"/>
+      <stop offset="100%" stop-color="#141921"/>
+    </linearGradient>
+    <!-- the loop spine: green -> green via amber/pink/indigo, mirroring the design legend -->
+    <linearGradient id="spine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#3fb950"/>
+      <stop offset="33%" stop-color="#d29922"/>
+      <stop offset="58%" stop-color="#f85149"/>
+      <stop offset="78%" stop-color="#a371f7"/>
+      <stop offset="100%" stop-color="#3fb950"/>
+    </linearGradient>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#6e7681"/>
+    </marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#3fb950"/>
+    </marker>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- backdrop -->
+  <rect width="860" height="640" fill="url(#amb)"/>
+
+  <!-- ============ terminal window ============ -->
+  <g filter="url(#soft)">
+    <rect x="24" y="20" width="812" height="600" rx="14" fill="url(#surf)" stroke="#222a35" stroke-width="1"/>
+    <rect x="24" y="20" width="812" height="40" rx="14" fill="url(#bar)"/>
+    <rect x="24" y="46" width="812" height="14" fill="#141921"/>
+    <line x1="24" y1="60" x2="836" y2="60" stroke="#222a35" stroke-width="1"/>
+  </g>
+
+  <!-- traffic lights + title bar -->
+  <circle cx="46" cy="40" r="6" fill="#ff5f56"/>
+  <circle cx="66" cy="40" r="6" fill="#ffbd2e"/>
+  <circle cx="86" cy="40" r="6" fill="#27c93f"/>
+  <text x="430" y="44" text-anchor="middle" fill="#8b949e" font-size="12.5">crawloop — self-heal in 4 beats · offline · no API key</text>
+  <text x="812" y="44" text-anchor="end" fill="#3fb950" font-size="11.5" font-weight="700">$0/page steady state</text>
+
+  <!-- prompt line -->
+  <text x="48" y="88" fill="#6e7681" font-size="13"><tspan fill="#3fb950" font-weight="700">❯</tspan> <tspan fill="#8b949e">python examples/selfheal_demo.py</tspan></text>
+
+  <!-- ============ the loop spine (left rail) ============ -->
+  <!-- runs through all four beat dots; the dashed arc at the bottom closes the loop back to beat 1 -->
+  <line x1="64" y1="128" x2="64" y2="566" stroke="url(#spine)" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- =================================================================== -->
+  <!-- BEAT 1 — v1 serves FREE, 0 model calls                              -->
+  <!-- =================================================================== -->
+  <g>
+    <!-- spine node -->
+    <circle cx="64" cy="128" r="11" fill="#0b0f17" stroke="#3fb950" stroke-width="2.5"/>
+    <text x="64" y="132" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="700">1</text>
+
+    <!-- card -->
+    <rect x="96" y="104" width="724" height="98" rx="10" fill="#0e1a14" stroke="#1f3d2b" stroke-width="1.2"/>
+    <rect x="96" y="104" width="4" height="98" rx="2" fill="#3fb950"/>
+
+    <text x="118" y="130" fill="#3fb950" font-size="14" font-weight="700">v1 SERVES</text>
+    <text x="220" y="130" fill="#6e7681" font-size="12.5">— a generated deterministic crawler is live</text>
+
+    <!-- state chip -->
+    <g>
+      <rect x="690" y="116" width="116" height="22" rx="11" fill="#0d2818" stroke="#238636" stroke-width="1.2"/>
+      <circle cx="704" cy="127" r="3.5" fill="#3fb950"/>
+      <text x="715" y="131" fill="#3fb950" font-size="11.5" font-weight="700">FREE · FAST</text>
+    </g>
+
+    <text x="118" y="158" fill="#c9d1d9" font-size="12.5">A Light in the Attic · £51.77   Tipping the Velvet · £53.74   Soumission · £50.10</text>
+
+    <!-- footer meta -->
+    <text x="118" y="184" fill="#6e7681" font-size="12">source=<tspan fill="#8b949e">registry v1</tspan>   ·   model calls = <tspan fill="#3fb950" font-weight="700">0</tspan>   ·   latency = <tspan fill="#8b949e">~4 ms</tspan>   ·   cost = <tspan fill="#3fb950" font-weight="700">$0.00</tspan></text>
+  </g>
+
+  <!-- =================================================================== -->
+  <!-- BEAT 2 — site redesigned -> selectors renamed -> v1 breaks          -->
+  <!-- =================================================================== -->
+  <g>
+    <circle cx="64" cy="246" r="11" fill="#0b0f17" stroke="#d29922" stroke-width="2.5"/>
+    <text x="64" y="250" text-anchor="middle" fill="#d29922" font-size="11" font-weight="700">2</text>
+
+    <rect x="96" y="222" width="724" height="98" rx="10" fill="#1a130c" stroke="#3d2f17" stroke-width="1.2"/>
+    <rect x="96" y="222" width="4" height="98" rx="2" fill="#d29922"/>
+
+    <text x="118" y="248" fill="#d29922" font-size="14" font-weight="700">SITE REDESIGNED</text>
+    <text x="262" y="248" fill="#6e7681" font-size="12.5">— overnight, the selectors are renamed</text>
+
+    <g>
+      <rect x="700" y="234" width="106" height="22" rx="11" fill="#2a1413" stroke="#a13d33" stroke-width="1.2"/>
+      <circle cx="714" cy="245" r="3.5" fill="#f85149"/>
+      <text x="725" y="249" fill="#f85149" font-size="11.5" font-weight="700">v1 BREAKS</text>
+    </g>
+
+    <!-- selector diff -->
+    <text x="118" y="276" font-size="12.5">
+      <tspan fill="#6e7681">article.</tspan><tspan fill="#f85149" text-decoration="line-through">product_pod</tspan><tspan fill="#6e7681"> → div.</tspan><tspan fill="#3fb950">card</tspan><tspan fill="#30363d">      </tspan><tspan fill="#6e7681">.</tspan><tspan fill="#f85149" text-decoration="line-through">price_color</tspan><tspan fill="#6e7681"> → span.</tspan><tspan fill="#3fb950">price-box</tspan>
+    </text>
+
+    <text x="118" y="302" fill="#f85149" font-size="12">v1 now matches <tspan font-weight="700">0 nodes</tspan> — in a plain pipeline this is a <tspan font-weight="700">silent outage</tspan>.</text>
+  </g>
+
+  <!-- =================================================================== -->
+  <!-- BEAT 3 — DRIFT detected -> LLM serves NOW + Loop regenerates -> v2   -->
+  <!-- =================================================================== -->
+  <g>
+    <circle cx="64" cy="392" r="11" fill="#0b0f17" stroke="#a371f7" stroke-width="2.5"/>
+    <text x="64" y="396" text-anchor="middle" fill="#a371f7" font-size="11" font-weight="700">3</text>
+
+    <rect x="96" y="340" width="724" height="146" rx="10" fill="#15101f" stroke="#332650" stroke-width="1.2"/>
+    <rect x="96" y="340" width="4" height="146" rx="2" fill="#a371f7"/>
+
+    <text x="118" y="366" fill="#a371f7" font-size="14" font-weight="700">DRIFT DETECTED</text>
+    <text x="258" y="366" fill="#6e7681" font-size="12.5">— validation fails → serve now, heal in the background</text>
+
+    <g>
+      <rect x="688" y="352" width="118" height="22" rx="11" fill="#1c1430" stroke="#6e40c9" stroke-width="1.2"/>
+      <circle cx="702" cy="363" r="3.5" fill="#a371f7"/>
+      <text x="713" y="367" fill="#c8a6ff" font-size="11.5" font-weight="700">SELF-HEALING</text>
+    </g>
+
+    <!-- two parallel tracks: T2 serves NOW (pink/paid) + The Loop regenerates (indigo) -->
+    <!-- left: serve now -->
+    <rect x="118" y="382" width="330" height="86" rx="8" fill="#1b0f1a" stroke="#5e2750" stroke-width="1.1"/>
+    <text x="134" y="404" fill="#db61c2" font-size="12" font-weight="700">SERVE NOW · T2</text>
+    <text x="134" y="424" fill="#c9d1d9" font-size="11.5">an LLM reads the raw HTML and</text>
+    <text x="134" y="440" fill="#c9d1d9" font-size="11.5">returns this request's records —</text>
+    <text x="134" y="458" fill="#6e7681" font-size="11.5">paid once · <tspan fill="#3fb950">no outage, correct data</tspan></text>
+
+    <!-- right: the loop -->
+    <rect x="466" y="382" width="338" height="86" rx="8" fill="#13112b" stroke="#3b357a" stroke-width="1.1"/>
+    <text x="482" y="404" fill="#a371f7" font-size="12" font-weight="700">THE LOOP · regenerate</text>
+    <!-- pipeline chips -->
+    <g font-size="10" font-weight="700">
+      <rect x="482" y="414" width="62" height="18" rx="9" fill="#1c1840" stroke="#4f46e5"/>
+      <text x="513" y="427" text-anchor="middle" fill="#b9b3ff">sample</text>
+      <rect x="550" y="414" width="58" height="18" rx="9" fill="#1c1840" stroke="#4f46e5"/>
+      <text x="579" y="427" text-anchor="middle" fill="#b9b3ff">oracle</text>
+      <rect x="614" y="414" width="66" height="18" rx="9" fill="#1c1840" stroke="#4f46e5"/>
+      <text x="647" y="427" text-anchor="middle" fill="#b9b3ff">codegen</text>
+      <rect x="686" y="414" width="66" height="18" rx="9" fill="#1c1840" stroke="#4f46e5"/>
+      <text x="719" y="427" text-anchor="middle" fill="#b9b3ff">gauntlet</text>
+    </g>
+    <!-- promote result -->
+    <g>
+      <rect x="482" y="440" width="270" height="20" rx="10" fill="#0d2818" stroke="#238636" stroke-width="1.1"/>
+      <text x="496" y="454" fill="#3fb950" font-size="11" font-weight="700">PROMOTE → v2 ✓</text>
+      <text x="600" y="454" fill="#6e7681" font-size="10.5">oracle-graded · gauntlet-passed</text>
+    </g>
+
+    <!-- connector: serve-now and loop -->
+    <line x1="448" y1="425" x2="466" y2="425" stroke="#6e7681" stroke-width="1.3" marker-end="url(#arr)"/>
+  </g>
+
+  <!-- =================================================================== -->
+  <!-- BEAT 4 — v2 serves the new layout, 0 model calls, FREE AGAIN         -->
+  <!-- =================================================================== -->
+  <g>
+    <circle cx="64" cy="542" r="11" fill="#0b0f17" stroke="#3fb950" stroke-width="2.5"/>
+    <text x="64" y="546" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="700">4</text>
+
+    <rect x="96" y="500" width="724" height="98" rx="10" fill="#0e1a14" stroke="#1f3d2b" stroke-width="1.2"/>
+    <rect x="96" y="500" width="4" height="98" rx="2" fill="#3fb950"/>
+
+    <text x="118" y="526" fill="#3fb950" font-size="14" font-weight="700">v2 SERVES</text>
+    <text x="216" y="526" fill="#6e7681" font-size="12.5">— the self-written crawler parses the new layout</text>
+
+    <g>
+      <rect x="664" y="512" width="142" height="22" rx="11" fill="#0d2818" stroke="#238636" stroke-width="1.2"/>
+      <circle cx="678" cy="523" r="3.5" fill="#3fb950"/>
+      <text x="689" y="527" fill="#3fb950" font-size="11.5" font-weight="700">FREE AGAIN · $0</text>
+    </g>
+
+    <text x="118" y="554" fill="#c9d1d9" font-size="12.5">A Light in the Attic · £51.77   Sharp Objects · £47.82   Tipping the Velvet · £53.74</text>
+
+    <text x="118" y="580" fill="#6e7681" font-size="12">source=<tspan fill="#8b949e">registry v2</tspan>   ·   model calls = <tspan fill="#3fb950" font-weight="700">0</tspan>   ·   latency = <tspan fill="#8b949e">~4 ms</tspan>   ·   cost = <tspan fill="#3fb950" font-weight="700">$0.00</tspan></text>
+  </g>
+
+  <!-- ============ loop-back arc: beat 4 -> beat 1 (every page after, free) ============ -->
+  <path d="M 64 553 C 40 580, 40 150, 64 117" fill="none" stroke="#3fb950" stroke-width="1.6"
+        stroke-dasharray="5 4" opacity="0.85" marker-end="url(#arrG)"/>
+  <text x="34" y="335" fill="#3fb950" font-size="10.5" font-weight="600" transform="rotate(-90 34 335)" opacity="0.95">every page after — free, forever</text>
+
+</svg>
