@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crawloop"
+version = "0.0.1"
+requires-python = ">=3.12"
+dependencies = [
+  "httpx>=0.27", "parsel>=1.9", "pydantic>=2.7", "pyyaml>=6",
+  "litellm>=1.40", "playwright>=1.44", "patchright>=1.44",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.5", "respx>=0.21"]
+
+[project.scripts]
+crawloop = "crawloop.cli:main"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+# Ship the package AND its subpackages — crawloop.loop holds the regeneration
+# Loop; a plain ["crawloop"] list silently drops it and breaks the built wheel.
+# schemas/ is intentionally NOT packaged: it is discovered at runtime by path.
+[tool.setuptools.packages.find]
+include = ["crawloop*"]

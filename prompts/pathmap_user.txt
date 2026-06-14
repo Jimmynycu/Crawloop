@@ -1,0 +1,14 @@
+Map the embedded JSON below to the record schema.
+
+JSON Schema for ONE record (the target fields + their types / enum codes):
+$schema_json
+
+ORACLE record (the trusted, normalized values your map must reproduce from the
+JSON — use it to pick + verify each path and transform):
+$oracle
+
+PAGE JSON (the embedded island to read paths out of — may be truncated):
+$blob
+
+Now output ONLY the JSON object {field: {"path": [...], "transform": ...}} using
+the transform vocabulary above. No prose, no code fences.

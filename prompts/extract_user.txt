@@ -1,0 +1,9 @@
+Extract records from the HTML below.
+
+JSON Schema for one record:
+$schema_json
+
+HTML:
+$html
+
+Return ONLY the JSON array of records, nothing else.

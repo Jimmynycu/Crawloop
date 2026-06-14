@@ -1,0 +1,29 @@
+{
+  "_about": "Scripted FakeCompleter responses for tests/test_selfheal_e2e.py. Hand-authored, NOT recorded from a real model. '{BASE}' is replaced with the fixture server's ephemeral http://127.0.0.1:<port> at load time. The list is ORDERED: it is replayed positionally by a plain FakeCompleter, so the order below is exactly the order the engine calls complete() during step 2 (drift -> T2 fallback serve, then the inline regeneration Loop).",
+  "responses": [
+    {
+      "note": "step2 drift fallback: T2 direct_extract of the requested page (/catalogue/page-1.html); 3 page-1 books, doubled-catalogue urls",
+      "text": "[{\"name\": \"A Light in the Attic\", \"price\": \"51.77\", \"in_stock\": true, \"url\": \"{BASE}/catalogue/catalogue/a-light-in-the-attic/index.html\"}, {\"name\": \"Tipping the Velvet\", \"price\": \"53.74\", \"in_stock\": true, \"url\": \"{BASE}/catalogue/catalogue/tipping-the-velvet/index.html\"}, {\"name\": \"Soumission\", \"price\": \"50.10\", \"in_stock\": false, \"url\": \"{BASE}/catalogue/catalogue/soumission/index.html\"}]"
+    },
+    {
+      "note": "loop oracle, sample 0 = /catalogue/page-1.html (same 3 books, doubled-catalogue urls)",
+      "text": "[{\"name\": \"A Light in the Attic\", \"price\": \"51.77\", \"in_stock\": true, \"url\": \"{BASE}/catalogue/catalogue/a-light-in-the-attic/index.html\"}, {\"name\": \"Tipping the Velvet\", \"price\": \"53.74\", \"in_stock\": true, \"url\": \"{BASE}/catalogue/catalogue/tipping-the-velvet/index.html\"}, {\"name\": \"Soumission\", \"price\": \"50.10\", \"in_stock\": false, \"url\": \"{BASE}/catalogue/catalogue/soumission/index.html\"}]"
+    },
+    {
+      "note": "loop oracle, sample 1 = /catalogue/page-2.html (Sharp Objects, doubled-catalogue url)",
+      "text": "[{\"name\": \"Sharp Objects\", \"price\": \"47.82\", \"in_stock\": true, \"url\": \"{BASE}/catalogue/catalogue/sharp-objects/index.html\"}]"
+    },
+    {
+      "note": "loop oracle, sample 2 = / (root: same 3 books, SINGLE-catalogue urls)",
+      "text": "[{\"name\": \"A Light in the Attic\", \"price\": \"51.77\", \"in_stock\": true, \"url\": \"{BASE}/catalogue/a-light-in-the-attic/index.html\"}, {\"name\": \"Tipping the Velvet\", \"price\": \"53.74\", \"in_stock\": true, \"url\": \"{BASE}/catalogue/tipping-the-velvet/index.html\"}, {\"name\": \"Soumission\", \"price\": \"50.10\", \"in_stock\": false, \"url\": \"{BASE}/catalogue/soumission/index.html\"}]"
+    },
+    {
+      "note": "loop codegen candidate #1 (k=2): a crawler for the MUTATED layout",
+      "text": "```python\nfrom parsel import Selector\nfrom crawloop.contract import Crawler, CrawlResult, FetchContext\n\n\nclass BooksListV2(Crawler):\n    family = \"127.0.0.1/product_list\"\n    schema_ref = \"Product@1\"\n\n    async def crawl(self, url: str, ctx: FetchContext) -> CrawlResult:\n        html = await ctx.fetch(url)\n        sel = Selector(text=html)\n        items = []\n        for card in sel.css(\"div.card\"):\n            avail = ctx.clean_text(\" \".join(card.css(\".stock::text\").getall())) or \"\"\n            items.append({\n                \"name\": card.css(\"h3 a::attr(title)\").get(),\n                \"price\": ctx.parse_money(card.css(\".price-box::text\").get()),\n                \"in_stock\": \"In stock\" in avail,\n                \"url\": ctx.absolutize(url, card.css(\"h3 a::attr(href)\").get()),\n            })\n        next_href = sel.css(\"div.pager-next a::attr(href)\").get()\n        return CrawlResult(items=items, next_url=ctx.absolutize(url, next_href))\n```"
+    },
+    {
+      "note": "loop codegen candidate #2 (k=2): identical mutated-layout crawler",
+      "text": "```python\nfrom parsel import Selector\nfrom crawloop.contract import Crawler, CrawlResult, FetchContext\n\n\nclass BooksListV2(Crawler):\n    family = \"127.0.0.1/product_list\"\n    schema_ref = \"Product@1\"\n\n    async def crawl(self, url: str, ctx: FetchContext) -> CrawlResult:\n        html = await ctx.fetch(url)\n        sel = Selector(text=html)\n        items = []\n        for card in sel.css(\"div.card\"):\n            avail = ctx.clean_text(\" \".join(card.css(\".stock::text\").getall())) or \"\"\n            items.append({\n                \"name\": card.css(\"h3 a::attr(title)\").get(),\n                \"price\": ctx.parse_money(card.css(\".price-box::text\").get()),\n                \"in_stock\": \"In stock\" in avail,\n                \"url\": ctx.absolutize(url, card.css(\"h3 a::attr(href)\").get()),\n            })\n        next_href = sel.css(\"div.pager-next a::attr(href)\").get()\n        return CrawlResult(items=items, next_url=ctx.absolutize(url, next_href))\n```"
+    }
+  ]
+}

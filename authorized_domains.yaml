@@ -1,0 +1,19 @@
+respect_robots: false          # POC default. Flip to true to honor robots.txt.
+
+domains:
+  - domain: books.toscrape.com
+    max_rps: 1.0
+    render_js: false
+  - domain: quotes.toscrape.com
+    max_rps: 1.0
+    render_js: true
+  - domain: shop.example.com
+    max_rps: 0.5
+    render_js: true
+    note: "owned by us; authorized 2026-06-12"
+    access_strategies:
+      - backoff
+      - stealth_browser
+      - session: { login_url: "https://shop.example.com/login", creds_env: "EXAMPLE_LOGIN" }
+      - bypass_token: { header: "x-waf-bypass", value_env: "EXAMPLE_WAF_TOKEN" }
+    proxy_env: "EXAMPLE_PROXY_URL"

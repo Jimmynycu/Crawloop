@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>crawloop — System Design v2 (for review)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1d23; --muted: #5c6470; --accent: #2563eb;
+    --border: #e2e6ea; --soft: #f6f8fa; --good: #16a34a; --warn: #d97706; --bad: #dc2626;
+    --code-bg: #0f172a; --code-fg: #e2e8f0;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         color: var(--fg); background: var(--bg); margin: 0; line-height: 1.6; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 48px 32px 120px; }
+  h1 { font-size: 2rem; margin: 0 0 4px; }
+  h2 { font-size: 1.45rem; margin-top: 56px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+  h2 .num { color: var(--accent); margin-right: 8px; }
+  h3 { font-size: 1.1rem; margin-top: 32px; }
+  .sub { color: var(--muted); margin-bottom: 32px; }
+  .meta { font-size: 0.85rem; color: var(--muted); }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; }
+  .pill.review { background: #fef3c7; color: #92400e; }
+  .pill.p1 { background: #dbeafe; color: #1e40af; }
+  .pill.p2 { background: #f3e8ff; color: #6b21a8; }
+  .pill.new { background: #dcfce7; color: #166534; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.9rem; }
+  th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); }
+  code { font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 0.85em;
+         background: var(--soft); padding: 1px 5px; border-radius: 4px; }
+  pre { background: var(--code-bg); color: var(--code-fg); padding: 16px 20px; border-radius: 8px;
+        overflow-x: auto; font-size: 0.82rem; line-height: 1.5; }
+  pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+  .filename { font-size: 0.75rem; color: var(--muted); font-family: ui-monospace, Menlo, monospace;
+              margin-bottom: -12px; margin-top: 20px; }
+  .box { border: 1px solid var(--border); border-left: 4px solid var(--accent); background: var(--soft);
+         padding: 12px 18px; border-radius: 6px; margin: 16px 0; }
+  .box.warn { border-left-color: var(--warn); }
+  .box.good { border-left-color: var(--good); }
+  .box.changed { border-left-color: var(--good); background: #f0fdf4; }
+  .toc { background: var(--soft); border: 1px solid var(--border); border-radius: 8px; padding: 20px 28px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc ol { margin: 8px 0; columns: 2; }
+  .approve { background: #ecfdf5; border: 2px solid var(--good); border-radius: 10px; padding: 24px 28px; margin-top: 64px; }
+  .kbd { border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 6px;
+         font-family: ui-monospace, Menlo, monospace; font-size: 0.85em; background: var(--soft); }
+  svg text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .legend { font-size: 0.8rem; color: var(--muted); text-align: center; margin-top: -8px; }
+  .changelog { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px 24px; margin: 20px 0; font-size: 0.9rem; }
+  .changelog li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>crawloop</h1>
+<div class="sub">Self-healing structured-data crawler — registry of LLM-generated per-page-family crawlers, with automated regeneration <em>and</em> access-recovery loops.
+<br><span class="meta">Design v2 · 2026-06-12 · status: <span class="pill review">AWAITING YOUR APPROVAL</span> · no code written yet</span></div>
+
+<div class="changelog">
+<strong>What changed v1 → v2</strong> (your annotations):
+<ul>
+  <li><strong>§1 / §7 — "replacement" clarified:</strong> the Loop <em>appends a new version</em> to the same family and flips the active pointer; it never overwrites/deletes. Old versions kept. New <strong>version ladder</strong> answers "same family, different version → what happens".</li>
+  <li><strong>§1 / §3 / §6 / §8 — blocks are now recoverable, not terminal:</strong> 429 / 401 / 403 / Cloudflare / captcha go into a new <strong>Access Recovery loop</strong> ("fix till success"), not a stop-and-alert. Human escalation only as last resort after <em>k</em> failed rounds.</li>
+  <li><strong>§1 — robots.txt:</strong> config toggle, default OFF for POC.</li>
+  <li><strong>§3 — save the success:</strong> diagram now shows successful crawlers <em>and</em> winning access strategies being saved/reinforced for reuse.</li>
+  <li><strong>§6 — Cloudflare / anti-bot handling added:</strong> escalating access-strategy ladder; CAPTCHA solver as opt-in last rung.</li>
+</ul>
+</div>
+
+<div class="toc">
+<strong>Contents</strong>
+<ol>
+  <li><a href="#goals">Goals &amp; constraints</a></li>
+  <li><a href="#research">Research grounding</a></li>
+  <li><a href="#arch">Architecture overview</a></li>
+  <li><a href="#layout">Repo &amp; component layout</a></li>
+  <li><a href="#contract">Crawler contract + example generated crawler</a></li>
+  <li><a href="#safety">Safety model + access layer</a></li>
+  <li><a href="#routing">Page-family routing + version ladder</a></li>
+  <li><a href="#runtime">Runtime flow &amp; failure taxonomy</a></li>
+  <li><a href="#loop">The Loop (regeneration)</a></li>
+  <li><a href="#validation">Correctness validation</a></li>
+  <li><a href="#schemas">Schema extensibility</a></li>
+  <li><a href="#testing">Test &amp; demo plan</a></li>
+  <li><a href="#phases">Phasing (POC → v1)</a></li>
+  <li><a href="#stack">Tech stack</a></li>
+  <li><a href="#risks">Risks &amp; open questions</a></li>
+</ol>
+</div>
+
+<h2 id="goals"><span class="num">1</span>Goals &amp; constraints</h2>
+<p><strong>Goal.</strong> Crawl and extract <em>correct</em> structured data from many differently-built websites. Fast path: a registry of per-page-family crawlers (one crawler per page template). When a crawler breaks or returns wrong/empty data, <strong>The Loop</strong> automatically generates a <em>new versioned crawler for that same page family</em> — it never overwrites or deletes the old one (see §7) — proves it correct against real pages, and registers it as the family's new <strong>active version</strong>. The next request uses it immediately; old versions are kept for rollback and as a runtime fallback ladder.</p>
+
+<div class="box changed"><strong>"Generate a replacement" = append a new version, not a new family, not a delete.</strong> A page family (e.g. <code>books.toscrape.com/product_list</code>) is a stable identity. Inside it lives an ordered list of crawler versions <code>v1, v2, v3…</code>, each an immutable code artifact. The Loop adds <code>v(N+1)</code> and points the family's <code>active_version</code> at it. The old code stays on disk for one-command rollback and as a fallback rung (§7).</div>
+
+<p><strong>Decisions already made (your answers):</strong></p>
+<table>
+<tr><th>Decision</th><th>Choice</th></tr>
+<tr><td>Crawler artifact</td><td><strong>LLM-generated Python code modules</strong> (not declarative selector specs)</td></tr>
+<tr><td>Deployment of new crawlers</td><td><strong>Full auto + audit log</strong>; human escalation only after repeated failure</td></tr>
+<tr><td>Runtime mode</td><td><strong>Online with fallback</strong> — broken crawler → serve via direct LLM extraction now, regenerate in background</td></tr>
+<tr><td>Blocked / access failures</td><td><span class="pill new">v2</span> <strong>Recoverable — the loop tries to "fix till success"</strong>, not stop-and-alert (§6, §8)</td></tr>
+<tr><td>robots.txt</td><td><span class="pill new">v2</span> <strong>Config toggle, default OFF for POC</strong></td></tr>
+<tr><td>Stack</td><td><strong>Python</strong></td></tr>
+<tr><td>LLM access</td><td><strong>litellm</strong> (multi-provider from day 1)</td></tr>
+<tr><td>Schemas</td><td>Start fixed, <strong>easily swappable</strong> — repo meant to grow as open source</td></tr>
+<tr><td>Test targets</td><td>toscrape.com sandboxes + synthetic layout-break fixtures + your authorized sites</td></tr>
+</table>
+
+<p><strong>Hard constraints (enforced in code, not just docs):</strong></p>
+<ul>
+  <li><strong>Hard domain allowlist = the ethical backbone.</strong> The engine can only ever fetch domains explicitly listed in <code>authorized_domains.yaml</code> — nothing else, ever. This is the structural guarantee that everything below stays inside <em>your authorized scope</em>.</li>
+  <li><strong>Access blocks are recoverable inside that scope.</strong> <span class="pill new">v2</span> 429 / 401 / 403 / Cloudflare / captcha are no longer a dead stop. They become a recoverable failure class the system resolves by legitimate means — backoff, your credentials/sessions, owner-issued bypass tokens, browser emulation (§6 Access layer). "Solve the block" is in-scope precisely <em>because</em> the allowlist guarantees the target is one you're authorized on.</li>
+  <li><strong>robots.txt</strong> — <span class="pill new">v2</span> config toggle <code>respect_robots</code>, default OFF for the POC (your call; targets are owned/authorized). Plumbing stays so it is a one-line flip; for authorized-but-not-owned sites, confirm the owner accepts this.</li>
+  <li><strong>Rate limits</strong> per domain, enforced centrally (generated code cannot bypass — see §6). Polite backoff on 429 is the first access-recovery rung — good-citizen behaviour, not evasion.</li>
+</ul>
+
+<h2 id="research"><span class="num">2</span>Research grounding</h2>
+<p>Two research passes (tool landscape; validation &amp; drift literature) ran before this design. What matters:</p>
+<ul>
+  <li><strong>The pattern is commercially proven, OSS gap is real.</strong> <a href="https://www.kadoa.com/blog/autogenerate-self-healing-web-scrapers">Kadoa</a>, Reworkd, and <a href="https://oxylabs.io/features/custom-parser">Oxylabs OxyCopilot</a> all sell exactly this loop ("AI compiles extractor once, runtime executes AI-free, AI regenerates on breakage"). No open-source project ships the full loop for <em>data extraction</em> — Skyvern/Stagehand do it only for browser <em>actions</em>.</li>
+  <li><strong>Validate in layers, cheap → expensive</strong> (§10). Schema checks catch breakage-shaped errors; only semantic checks (oracle comparison, LLM judge) catch <em>wrong-element-right-type</em> — e.g. a price scraped from the "Recommended" sidebar that passes every type check. This is the documented killer failure mode.</li>
+  <li><strong>"LLM proposes, deterministic code decides."</strong> Every serious production writeup converges here: an LLM never gets to be the sole gate that promotes a crawler. Deterministic execution + comparison decides.</li>
+  <li><strong>Generate from ≥3 sample pages, not 1</strong> — single-sample generation produces brittle <code>nth-child</code>-style logic (crawl4ai docs, Oxylabs uses 3–5 URLs).</li>
+  <li><strong>Candidate ensembles beat single-shot</strong> — Stanford's <a href="https://arxiv.org/abs/2304.09433">Evaporate</a> (VLDB'24): generate several candidate extractor functions, score, pick best — beats direct LLM extraction at ~110× fewer tokens. <a href="https://arxiv.org/abs/2404.12753">AutoScraper</a> (EMNLP'24) contributes the acceptance metric design.</li>
+  <li><span class="pill new">v2</span> <strong>Access recovery has the same "save the winner, reuse it" shape as extraction.</strong> Stagehand caches the resolved selector per action and self-heals to an LLM on miss; we apply the identical idea to the <em>fetch</em> side — record which access strategy got through for a domain, reuse it next time, escalate only when it stops working. Stealth fetchers (Patchright) and authorized proxies are the standard legitimate tools for JS/fingerprint challenges on your own properties.</li>
+  <li><strong>Useful primitives we reuse</strong>: Playwright/Patchright (fetch + stealth), parsel (extraction lib inside generated code), Pydantic v2 (schemas), litellm (LLM access). Phase 2: Scrapling-style element fingerprints for LLM-free healing.</li>
+</ul>
+
+<h2 id="arch"><span class="num">3</span>Architecture overview</h2>
+
+<svg viewBox="0 0 960 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Runtime architecture v2">
+  <defs>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#5c6470"/></marker>
+    <marker id="gr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+    <marker id="or" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#d97706"/></marker>
+    <marker id="pk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#db2777"/></marker>
+    <marker id="iv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#4f46e5"/></marker>
+    <marker id="rd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  </defs>
+
+  <!-- request -->
+  <rect x="18" y="26" width="176" height="46" rx="8" fill="#dbeafe" stroke="#2563eb"/>
+  <text x="106" y="54" text-anchor="middle" font-size="13" font-weight="600" fill="#1e40af">request(url, schema?)</text>
+  <!-- router -->
+  <rect x="236" y="24" width="176" height="50" rx="8" fill="#fff" stroke="#5c6470"/>
+  <text x="324" y="45" text-anchor="middle" font-size="13" font-weight="600">Router</text>
+  <text x="324" y="62" text-anchor="middle" font-size="10.5" fill="#5c6470">url → family + version ladder</text>
+  <!-- T0 -->
+  <rect x="236" y="124" width="176" height="62" rx="8" fill="#ecfdf5" stroke="#16a34a"/>
+  <text x="324" y="149" text-anchor="middle" font-size="13" font-weight="600" fill="#166534">T0 · registry crawler</text>
+  <text x="324" y="167" text-anchor="middle" font-size="10.5" fill="#166534">version ladder · ms · $0</text>
+  <!-- validator -->
+  <rect x="470" y="126" width="158" height="58" rx="8" fill="#fff" stroke="#5c6470"/>
+  <text x="549" y="150" text-anchor="middle" font-size="13" font-weight="600">Validator</text>
+  <text x="549" y="168" text-anchor="middle" font-size="10.5" fill="#5c6470">schema + sanity gates</text>
+  <!-- output -->
+  <rect x="700" y="124" width="242" height="62" rx="8" fill="#dbeafe" stroke="#2563eb"/>
+  <text x="821" y="148" text-anchor="middle" font-size="13" font-weight="600" fill="#1e40af">structured data ✓</text>
+  <text x="821" y="166" text-anchor="middle" font-size="10.5" fill="#1e40af">+ snapshot + run log</text>
+  <text x="821" y="206" text-anchor="middle" font-size="10.5" fill="#166534">↻ active crawler reinforced &amp; saved for reuse</text>
+  <!-- classifier -->
+  <rect x="470" y="236" width="158" height="58" rx="8" fill="#fef3c7" stroke="#d97706"/>
+  <text x="549" y="260" text-anchor="middle" font-size="13" font-weight="600" fill="#92400e">Failure classifier</text>
+  <text x="549" y="278" text-anchor="middle" font-size="10.5" fill="#92400e">transient? drift? blocked?</text>
+  <!-- retry -->
+  <rect x="236" y="236" width="176" height="58" rx="8" fill="#fff" stroke="#5c6470"/>
+  <text x="324" y="260" text-anchor="middle" font-size="13" font-weight="600">retry w/ backoff</text>
+  <text x="324" y="278" text-anchor="middle" font-size="10.5" fill="#5c6470">transient only · no regen</text>
+  <!-- T2 -->
+  <rect x="470" y="338" width="158" height="58" rx="8" fill="#fdf2f8" stroke="#db2777"/>
+  <text x="549" y="362" text-anchor="middle" font-size="13" font-weight="600" fill="#9d174d">T2 · LLM fallback</text>
+  <text x="549" y="380" text-anchor="middle" font-size="10.5" fill="#9d174d">extract · serves NOW</text>
+  <!-- loop -->
+  <rect x="236" y="338" width="176" height="96" rx="8" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+  <text x="324" y="364" text-anchor="middle" font-size="13" font-weight="700" fill="#3730a3">THE LOOP · extraction</text>
+  <text x="324" y="383" text-anchor="middle" font-size="10.5" fill="#3730a3">regenerate → test →</text>
+  <text x="324" y="399" text-anchor="middle" font-size="10.5" fill="#3730a3">promote new version</text>
+  <text x="324" y="421" text-anchor="middle" font-size="10.5" fill="#3730a3">(§9)</text>
+  <!-- access recovery -->
+  <rect x="700" y="236" width="242" height="88" rx="8" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+  <text x="821" y="258" text-anchor="middle" font-size="13" font-weight="700" fill="#3730a3">ACCESS RECOVERY · fetch</text>
+  <text x="821" y="276" text-anchor="middle" font-size="10.5" fill="#3730a3">backoff · session · creds ·</text>
+  <text x="821" y="292" text-anchor="middle" font-size="10.5" fill="#3730a3">bypass token · stealth browser</text>
+  <text x="821" y="312" text-anchor="middle" font-size="10.5" fill="#166534">↻ winning strategy saved per domain</text>
+  <!-- escalate -->
+  <rect x="700" y="360" width="242" height="44" rx="8" fill="#fee2e2" stroke="#dc2626"/>
+  <text x="821" y="380" text-anchor="middle" font-size="12" font-weight="600" fill="#991b1b">human · last resort only</text>
+  <text x="821" y="396" text-anchor="middle" font-size="10" fill="#991b1b">after k failed rounds (Loop + Access)</text>
+
+  <!-- arrows -->
+  <line x1="194" y1="49" x2="234" y2="49" stroke="#5c6470" stroke-width="1.5" marker-end="url(#g)"/>
+  <line x1="312" y1="74" x2="312" y2="122" stroke="#5c6470" stroke-width="1.5" marker-end="url(#g)"/>
+  <line x1="412" y1="151" x2="468" y2="151" stroke="#5c6470" stroke-width="1.5" marker-end="url(#g)"/>
+  <line x1="628" y1="151" x2="698" y2="151" stroke="#16a34a" stroke-width="2" marker-end="url(#gr)"/>
+  <text x="663" y="143" text-anchor="middle" font-size="10.5" fill="#16a34a">pass</text>
+  <line x1="549" y1="184" x2="549" y2="234" stroke="#d97706" stroke-width="2" marker-end="url(#or)"/>
+  <text x="592" y="214" text-anchor="middle" font-size="10" fill="#d97706">fail / empty</text>
+  <line x1="468" y1="261" x2="414" y2="261" stroke="#5c6470" stroke-width="1.5" marker-end="url(#g)"/>
+  <text x="441" y="251" text-anchor="middle" font-size="10" fill="#5c6470">transient</text>
+  <line x1="324" y1="236" x2="324" y2="188" stroke="#5c6470" stroke-width="1.5" marker-end="url(#g)"/>
+  <line x1="549" y1="294" x2="549" y2="336" stroke="#db2777" stroke-width="2" marker-end="url(#pk)"/>
+  <text x="562" y="318" text-anchor="middle" font-size="10" fill="#db2777">drift</text>
+  <!-- T2 serves output -->
+  <path d="M628 360 L668 360 L668 168 L698 168" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#gr)"/>
+  <text x="638" y="332" text-anchor="middle" font-size="10" fill="#16a34a">serves now</text>
+  <!-- T2 enqueue loop -->
+  <line x1="468" y1="372" x2="414" y2="382" stroke="#4f46e5" stroke-width="2" marker-end="url(#iv)"/>
+  <text x="441" y="356" text-anchor="middle" font-size="10" fill="#4f46e5">enqueue</text>
+  <!-- classifier -> access -->
+  <line x1="628" y1="261" x2="698" y2="261" stroke="#4f46e5" stroke-width="2" marker-end="url(#iv)"/>
+  <text x="664" y="251" text-anchor="middle" font-size="10" fill="#4f46e5">blocked</text>
+  <!-- access loop back to fetch -->
+  <path d="M700 248 L686 248 L686 104 L336 104 L336 122" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#iv)"/>
+  <text x="512" y="98" text-anchor="middle" font-size="10" fill="#4f46e5">retry fetch w/ working strategy</text>
+  <!-- access escalate -->
+  <line x1="821" y1="324" x2="821" y2="358" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#rd)"/>
+  <!-- loop promote back to registry -->
+  <path d="M236 360 L150 360 L150 151 L234 151" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#iv)"/>
+  <text x="146" y="256" text-anchor="middle" font-size="10" fill="#4f46e5" transform="rotate(-90 146 256)">promote new version</text>
+</svg>
+<div class="legend">Green = fast deterministic path &amp; saved wins · pink = paid LLM path (also the oracle) · indigo = self-healing loops: extraction + access · red = human escalation, last resort only</div>
+
+<p>Two fast tiers, one paid fallback, and <strong>two</strong> background self-healing loops — one for <em>extraction</em> breaking, one for <em>fetching</em> being blocked:</p>
+<table>
+<tr><th>Tier / loop</th><th>What</th><th>Cost/latency</th><th>Phase</th></tr>
+<tr><td><strong>T0</strong></td><td>Registry crawler — generated Python, deterministic; tries the family's version ladder (§7)</td><td>ms, $0</td><td><span class="pill p1">POC</span></td></tr>
+<tr><td><strong>T1</strong></td><td>Fingerprint healing — relocate moved elements by stored similarity, no LLM (Scrapling-style)</td><td>ms, $0</td><td><span class="pill p2">Phase 2</span></td></tr>
+<tr><td><strong>T2</strong></td><td>LLM direct extraction — serves the live request during breakage; same output schema; doubles as <em>oracle</em> for The Loop</td><td>seconds, ~$0.01–0.05/page</td><td><span class="pill p1">POC</span></td></tr>
+<tr><td><strong>The Loop</strong></td><td>Background <em>extraction</em> regeneration: codegen → test → promote new version (§9)</td><td>minutes, ~$0.10–0.50/family</td><td><span class="pill p1">POC</span></td></tr>
+<tr><td><strong>Access Recovery</strong> <span class="pill new">v2</span></td><td>Background <em>fetch</em> healing: escalate access strategies until one gets through; save the winner per domain (§6)</td><td>seconds–minutes, mostly $0</td><td><span class="pill p1">POC</span></td></tr>
+</table>
+
+<h2 id="layout"><span class="num">4</span>Repo &amp; component layout</h2>
+<pre><code>crawloop/
+├── pyproject.toml
+├── authorized_domains.yaml      # explicit opt-in scope + per-domain access strategies
+├── crawloop/
+│   ├── contract.py              # Crawler protocol, FetchContext, CrawlResult
+│   ├── registry.py              # SQLite + crawlers/ files: families, versions, fixtures, audit
+│   ├── router.py                # url → family + version ladder (URL regex; DOM-shingle phase 2)
+│   ├── executor.py              # run version ladder, drive pagination, snapshot HTML
+│   ├── validator.py             # layered gates: schema → field rules → history → judge
+│   ├── fallback.py              # T2: LLM direct extraction via litellm (also oracle)
+│   ├── access.py                # ← v2: AccessStrategy ladder, robots toggle, rate limiter
+│   ├── safety.py                # AST allowlist, domain allowlist
+│   ├── monitor.py               # fill-rate / distribution stats        [phase 2]
+│   ├── loop/
+│   │   ├── trigger.py           # failure classifier → extraction-loop OR access-recovery queue
+│   │   ├── sampler.py           # collect ≥3 fresh sample pages per family
+│   │   ├── codegen.py           # LLM writes candidate crawler modules (prompts in prompts/)
+│   │   ├── gauntlet.py          # static gate + sandboxed tests + scoring
+│   │   ├── promote.py           # version bump, audit entry, golden-fixture refresh
+│   │   └── access_recovery.py   # ← v2: escalate fetch strategies until success, save winner
+│   └── cli.py                   # crawl / family / loop / access / audit commands
+├── prompts/                     # all LLM prompt templates (never inline in .py)
+├── schemas/                     # Pydantic models: product.py, article.py, ... (drop-in)
+├── crawlers/                    # generated modules: &lt;family_slug&gt;/v&lt;N&gt;.py + meta.json
+├── fixtures/                    # golden HTML snapshots + expected JSON per family
+└── tests/
+    ├── fixture_server/          # serves toscrape mirror + mutated layouts + fake-block modes
+    └── test_selfheal_e2e.py     # flagship CI test: break layout → Loop heals → assert
+</code></pre>
+<p>Registry storage: <strong>SQLite</strong> (single file, zero ops, fine to 500+ families) + crawler code as real <code>.py</code> files on disk so they're diffable in git and reviewable on GitHub. Postgres swap later is an interface change, not a redesign.</p>
+
+<h2 id="contract"><span class="num">5</span>Crawler contract + example generated crawler</h2>
+<p>Every generated crawler implements one small interface. The engine drives pagination (so rate limiting stays central); the crawler extracts one page and reports where "next" is. <strong>All fetching goes through <code>ctx</code></strong>, which is where the access layer (§6) and rate limiting live — the crawler never opens its own connection.</p>
+
+<div class="filename">crawloop/contract.py (excerpt)</div>
+<pre><code>class CrawlResult(BaseModel):
+    items: list[dict]            # validated against the family's schema downstream
+    next_url: str | None = None  # engine follows it, rate-limited, up to family max_pages
+
+class FetchContext(Protocol):
+    async def fetch(self, url: str) -> str            # HTTP GET — allowlist + rate limit + access recovery enforced inside
+    async def fetch_rendered(self, url: str, wait_for: str | None = None) -> str  # Playwright/Patchright, JS pages
+    def absolutize(self, base: str, href: str | None) -> str | None
+    def parse_money(self, raw: str | None) -> Decimal | None   # common coercion helpers
+    def clean_text(self, raw: str | None) -> str | None
+
+class Crawler(Protocol):
+    family: str                  # e.g. "books.toscrape.com/product_list"
+    schema_ref: str              # e.g. "Product@1"
+    async def crawl(self, url: str, ctx: FetchContext) -> CrawlResult
+</code></pre>
+
+<p><strong>Example — what The Loop would actually generate</strong> for the books.toscrape.com listing family:</p>
+<div class="filename">crawlers/books_toscrape__product_list/v3.py (generated 2026-06-12 by loop run #17)</div>
+<pre><code>from parsel import Selector
+from crawloop.contract import Crawler, CrawlResult, FetchContext
+
+class BooksToscrapeProductList(Crawler):
+    family = "books.toscrape.com/product_list"
+    schema_ref = "Product@1"
+
+    async def crawl(self, url: str, ctx: FetchContext) -> CrawlResult:
+        html = await ctx.fetch(url)
+        sel = Selector(html)
+        items = []
+        for card in sel.css("article.product_pod"):
+            items.append({
+                "name": card.css("h3 a::attr(title)").get(),
+                "price": ctx.parse_money(card.css(".price_color::text").get()),
+                "in_stock": "In stock" in (ctx.clean_text(
+                    " ".join(card.css(".availability::text").getall())) or ""),
+                "url": ctx.absolutize(url, card.css("h3 a::attr(href)").get()),
+            })
+        next_href = sel.css("li.next a::attr(href)").get()
+        return CrawlResult(items=items, next_url=ctx.absolutize(url, next_href))
+</code></pre>
+
+<div class="box">
+<strong>Why code-as-artifact works here</strong> (your choice, and it buys real power): pagination quirks, JS-rendered pages (<code>fetch_rendered</code>), conditional fields, list+detail two-step crawls — all expressible without inventing a spec language. The cost — auto-deploying generated code — is paid back by §6.
+</div>
+
+<h2 id="safety"><span class="num">6</span>Safety model + access layer</h2>
+
+<h3>6a · What a bad generated crawler can do — nothing the <code>ctx</code> doesn't permit</h3>
+<ol>
+  <li><strong>Capability injection.</strong> Generated code receives all I/O through <code>FetchContext</code>. It cannot construct sockets, HTTP clients, or browsers itself. <code>ctx.fetch*</code> internally enforces: domain allowlist → rate limit → access strategy → logging. A crawler that "goes rogue" can only request allowed pages slower than the limit.</li>
+  <li><strong>AST static gate</strong> — runs at registration AND at every module load:
+    <ul>
+      <li>Import allowlist: <code>parsel</code>, <code>re</code>, <code>json</code>, <code>datetime</code>, <code>decimal</code>, <code>urllib.parse</code>, <code>crawloop.contract</code>. Nothing else.</li>
+      <li>Banned nodes: <code>eval</code>/<code>exec</code>/<code>compile</code>, <code>open()</code>, <code>__import__</code>, <code>getattr</code>-with-string-literal tricks, <code>subprocess</code>/<code>os</code>/<code>socket</code>/<code>requests</code>/<code>httpx</code> imports, dunder attribute access.</li>
+    </ul></li>
+  <li><strong>Subprocess sandbox for candidates.</strong> During testing, candidate code runs in a subprocess with wall-clock timeout (30s/page) and memory cap, fed <em>stored</em> HTML — no network for the offline rounds.</li>
+  <li><strong>Promoted code runs in-process</strong> for speed — it passed the AST gate and full source + diff sits in the audit log. (You picked full-auto; this is the matching posture. Flip <code>executor.isolation = subprocess</code> in config for max paranoia per request.)</li>
+</ol>
+
+<h3>6b · Access layer — handling blocks &amp; anti-bot <span class="pill new">v2</span></h3>
+<p>When <code>ctx.fetch*</code> hits a block instead of HTML, it does <strong>not</strong> stop. It walks an escalating, per-domain <strong>access-strategy ladder</strong> until something gets through, then records the winner so the next fetch starts there. This is the "fix till success" you asked for — kept legitimate by the hard allowlist (the target is always one you authorized).</p>
+<table>
+<tr><th>#</th><th>Strategy</th><th>Clears</th><th>Legitimate because…</th></tr>
+<tr><td>1</td><td><strong>Backoff + retry</strong> (exponential, jitter)</td><td>429, 5xx, transient</td><td>Respecting rate limits is good-citizen behaviour, the opposite of evasion</td></tr>
+<tr><td>2</td><td><strong>Realistic headers / browser-like client</strong></td><td>naïve UA blocks</td><td>Standard for any real browser traffic</td></tr>
+<tr><td>3</td><td><strong>Headless browser</strong> (Playwright)</td><td>JS-rendered pages, simple JS challenges</td><td>Rendering the page your browser would render</td></tr>
+<tr><td>4</td><td><strong>Stealth browser</strong> (Patchright)</td><td>fingerprint/Cloudflare JS challenges</td><td>Often clears the challenge with no "solving" at all; standard for automating your own JS-heavy property</td></tr>
+<tr><td>5</td><td><strong>Authenticated session</strong> (owner-supplied login / cookies / API token)</td><td>401, 403, gated content</td><td>You are presenting <em>your own</em> credentials for a site you're authorized on</td></tr>
+<tr><td>6</td><td><strong>Owner-issued bypass token / allowlisted proxy</strong></td><td>WAF/Cloudflare on owned sites</td><td>A token/IP <em>you</em> configured in your own WAF — the recommended fix for your own properties</td></tr>
+<tr><td>7</td><td><strong>CAPTCHA solver</strong> — <em>opt-in, off by default, per authorized domain</em></td><td>explicit captcha</td><td>Last rung; requires you to set <code>captcha_solver</code> + assert authorization for that domain</td></tr>
+</table>
+<p>The loop records <code>working_strategy</code> per domain (e.g. "stealth_browser + session"), reuses it first next time, and only re-escalates if it stops working — exactly the "save the success, reuse it" pattern from the extraction side. After <em>k</em> failed full ladders, the domain is escalated to a human (data may pause); it is never silently dropped.</p>
+
+<div class="box warn">
+<strong>The one honest boundary.</strong> This ladder is built to get an <em>authorized</em> party through to <em>their own / permissioned</em> content — credentials you hold, tokens you issued, challenges your own WAF raises. It is <strong>not</strong> a general anti-bot defeat engine: rungs 4–7 only ever run against allowlisted domains, and the CAPTCHA rung is opt-in and requires an explicit per-domain authorization assertion. For your own sites the cleaner fix is usually rung 6 (allowlist the crawler in your WAF) rather than solving a challenge you control. This keeps the OSS repo from being a drop-in tool for hammering sites you don't own.
+</div>
+
+<div class="filename">authorized_domains.yaml (example, v2)</div>
+<pre><code>respect_robots: false          # POC default (your call). Flip to true to honor robots.txt.
+
+domains:
+  - domain: books.toscrape.com          # public scraping sandbox
+    max_rps: 1.0
+    render_js: false
+  - domain: quotes.toscrape.com
+    max_rps: 1.0
+    render_js: true                     # /js variant needs a browser
+  - domain: shop.example.com            # ← your authorized / owned property
+    max_rps: 0.5
+    render_js: true
+    note: "owned by us; authorized 2026-06-12"
+    access_strategies:                  # tried in order when a block is hit (§6b)
+      - backoff
+      - stealth_browser                 # Patchright — clears most JS/fingerprint challenges
+      - session: { login_url: "https://shop.example.com/login",
+                   creds_env: "EXAMPLE_LOGIN" }      # resolves 401/403
+      - bypass_token: { header: "x-waf-bypass", value_env: "EXAMPLE_WAF_TOKEN" }  # owner-issued
+      # - captcha_solver: { provider: "...", api_key_env: "...", authorized: true }  # opt-in
+    proxy_env: "EXAMPLE_PROXY_URL"      # optional authorized egress IP
+</code></pre>
+
+<h2 id="routing"><span class="num">7</span>Page-family routing + version ladder</h2>
+<p>A <em>page family</em> = one template on one site (listing page, detail page, article page…). Registry row per family:</p>
+<pre><code>family: books.toscrape.com/product_list
+url_patterns: ["^https?://books\\.toscrape\\.com/(catalogue/category/.+/)?(page-\\d+\\.html|index\\.html)?$"]
+schema_ref: Product@1
+versions:                  # ordered, newest first — the "version ladder"
+  - {v: 3, status: active,    promoted: 2026-06-12, success_30d: 0.99}
+  - {v: 2, status: fallback,  retired:  2026-06-12, success_30d: 0.55}   # still tried if v3 fails
+  - {v: 1, status: archived}                                              # rollback only
+status: healthy            # healthy | degraded | regenerating | escalated
+health: {runs: 1422, validation_fail_rate_7d: 0.0, last_success: …}</code></pre>
+
+<div class="box changed">
+<strong>"Same family, different version — what happens?"</strong> (your §7 question). Versions are not just history; at runtime they form a <strong>ladder the executor walks newest → older</strong>:
+<ol>
+  <li>Try <code>active</code> (v3) → validate (§10). Pass → serve, bump v3's success stat. <em>Normal, ms.</em></li>
+  <li>v3 fails validation (drift) → try the next <code>fallback</code> version (v2) on the same page. If v2 validates, serve it and record that this URL still matches the older layout.</li>
+  <li>No version validates → T2 fallback serves now + enqueue The Loop.</li>
+</ol>
+Why this matters: real sites roll out redesigns gradually or A/B test, so <strong>both old and new layouts can be live at once</strong>. A single "active version" would fail ~half the time during a migration. The ladder absorbs that for free. If the Loop sees <em>both</em> layouts persist, it keeps two versions active (ordered by recent success) rather than fighting over one — and can split into sub-families if they diverge for good. A promote is therefore an <em>append + reorder</em> of this ladder, never a destructive swap.
+</div>
+
+<ul>
+  <li><span class="pill p1">POC</span> Routing = URL regex match, written by The Loop when the family is first created (LLM proposes the pattern from sample URLs; you can hand-edit).</li>
+  <li><span class="pill p2">Phase 2</span> Unknown-URL handling: DOM path-shingle MinHash similarity vs known families (research: shingling beats tree-diff on cost <em>and</em> quality). Same primitive doubles as the structural-drift early alarm.</li>
+  <li>URL matches nothing → <strong>new-family flow</strong>: T2 extracts immediately (needs a target schema in the request), Loop bootstraps a brand-new crawler + registry entry. Same machinery as healing — new family is just "healing from nothing."</li>
+</ul>
+
+<h2 id="runtime"><span class="num">8</span>Runtime flow &amp; failure taxonomy</h2>
+<p>Online request, your "fallback OK" mode:</p>
+<ol>
+  <li>Route url → family. Load the version ladder (§7).</li>
+  <li>Run T0 ladder → validate (§10 runtime gates). Pass → return data (+ store HTML snapshot every Nth run as future fixture; reinforce the winning version's health).</li>
+  <li>Fail → <strong>classify the failure</strong> (table below). Classification decides retry vs access-recovery vs regenerate. This is the policy you asked about.</li>
+  <li><em>Drift</em> → T2 LLM fallback serves this request now (validated against the same schema) → enqueue The Loop (deduped: one in-flight job per family). <em>Blocked</em> → Access Recovery (§6b) tries to get through, then re-runs the crawler.</li>
+  <li>Loop / Access Recovery save their winners → subsequent requests are fast again.</li>
+</ol>
+
+<table>
+<tr><th>Signal</th><th>Class</th><th>Action</th></tr>
+<tr><td>Timeout, connection reset, HTTP 5xx</td><td>transient</td><td>Retry ×3 w/ exponential backoff. <strong>Never regen</strong> — regen on flaky network would thrash.</td></tr>
+<tr><td>HTTP 200 + schema/validation failure, empty result, fill-rate collapse</td><td><strong>drift</strong></td><td>Try older versions in the ladder → else T2 fallback now + enqueue The Loop.</td></tr>
+<tr><td>HTTP 429</td><td><strong>blocked (rate)</strong> <span class="pill new">v2</span></td><td>Access Recovery rung 1: exponential backoff + retry; lower effective RPS for the domain.</td></tr>
+<tr><td>HTTP 401 / 403, gated content</td><td><strong>blocked (auth)</strong> <span class="pill new">v2</span></td><td>Access Recovery: inject configured session/credentials/API token for that authorized domain; retry.</td></tr>
+<tr><td>Cloudflare / JS challenge / captcha markers</td><td><strong>blocked (challenge)</strong> <span class="pill new">v2</span></td><td>Access Recovery: escalate browser → stealth → bypass token → (opt-in) solver. Save winner. Retry fetch.</td></tr>
+<tr><td>All access strategies exhausted ×k</td><td>escalated</td><td>Alert human; domain paused. Last resort only — data is never silently dropped.</td></tr>
+<tr><td>Structural fingerprint shift alarm <span class="pill p2">Phase 2</span></td><td>drift-early</td><td>Enqueue Loop proactively before users see failures.</td></tr>
+<tr><td>HTTP 404/410, soft-404 (200 + "not found" body)</td><td>gone</td><td>Mark URL dead. No regen (page absence isn't crawler breakage).</td></tr>
+</table>
+
+<h2 id="loop"><span class="num">9</span>The Loop — regeneration state machine</h2>
+
+<svg viewBox="0 0 940 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Loop pipeline">
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3730a3"/>
+    </marker>
+  </defs>
+  <g font-size="12">
+    <rect x="15"  y="30" width="130" height="70" rx="8" fill="#eef2ff" stroke="#4f46e5"/>
+    <text x="80" y="58" text-anchor="middle" font-weight="600" fill="#3730a3">1 · SAMPLE</text>
+    <text x="80" y="76" text-anchor="middle" fill="#3730a3">≥3 fresh pages</text>
+    <rect x="175" y="30" width="130" height="70" rx="8" fill="#eef2ff" stroke="#4f46e5"/>
+    <text x="240" y="58" text-anchor="middle" font-weight="600" fill="#3730a3">2 · ORACLE</text>
+    <text x="240" y="76" text-anchor="middle" fill="#3730a3">LLM direct-extract</text>
+    <rect x="335" y="30" width="130" height="70" rx="8" fill="#eef2ff" stroke="#4f46e5"/>
+    <text x="400" y="58" text-anchor="middle" font-weight="600" fill="#3730a3">3 · CODEGEN</text>
+    <text x="400" y="76" text-anchor="middle" fill="#3730a3">1–3 candidates</text>
+    <rect x="495" y="30" width="130" height="70" rx="8" fill="#eef2ff" stroke="#4f46e5"/>
+    <text x="560" y="50" text-anchor="middle" font-weight="600" fill="#3730a3">4 · GAUNTLET</text>
+    <text x="560" y="68" text-anchor="middle" fill="#3730a3">AST → sandbox →</text>
+    <text x="560" y="84" text-anchor="middle" fill="#3730a3">score vs oracle+history</text>
+    <rect x="655" y="30" width="130" height="70" rx="8" fill="#ecfdf5" stroke="#16a34a"/>
+    <text x="720" y="58" text-anchor="middle" font-weight="600" fill="#166534">5 · PROMOTE</text>
+    <text x="720" y="76" text-anchor="middle" fill="#166534">append + reorder</text>
+    <rect x="815" y="30" width="110" height="70" rx="8" fill="#fee2e2" stroke="#dc2626"/>
+    <text x="870" y="58" text-anchor="middle" font-weight="600" fill="#991b1b">ESCALATE</text>
+    <text x="870" y="76" text-anchor="middle" fill="#991b1b">after 3 rounds</text>
+    <line x1="145" y1="65" x2="173" y2="65" stroke="#3730a3" stroke-width="2" marker-end="url(#arr2)"/>
+    <line x1="305" y1="65" x2="333" y2="65" stroke="#3730a3" stroke-width="2" marker-end="url(#arr2)"/>
+    <line x1="465" y1="65" x2="493" y2="65" stroke="#3730a3" stroke-width="2" marker-end="url(#arr2)"/>
+    <line x1="625" y1="65" x2="653" y2="65" stroke="#16a34a" stroke-width="2" marker-end="url(#arr2)"/>
+    <path d="M 560 100 L 560 160 L 400 160 L 400 102" fill="none" stroke="#d97706" stroke-width="2" marker-end="url(#arr2)"/>
+    <text x="480" y="178" text-anchor="middle" fill="#d97706" font-size="11">all candidates fail → retry w/ failure report in prompt (max 3 rounds)</text>
+    <path d="M 690 100 L 690 200 L 870 200 L 870 102" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arr2)"/>
+  </g>
+</svg>
+
+<ol>
+  <li><strong>SAMPLE.</strong> Collect ≥3 URLs of the family (recent run history; or follow links from a listing page). Fetch fresh HTML (through the access layer — so a blocked family is unblocked first). Store snapshots. <em>One sample → brittle selectors; three+ forces generalization.</em></li>
+  <li><strong>ORACLE.</strong> T2 LLM direct-extracts each sample against the family schema → "oracle JSONs". These are what <em>correct</em> means for this run. Oracle outputs must themselves pass schema validation; if oracle can't extract, escalate (page may be gone — don't generate against garbage).</li>
+  <li><strong>CODEGEN.</strong> Strong model via litellm. Prompt (template in <code>prompts/codegen.j2</code>) contains: contract source, target Pydantic schema, the 3+ <em>trimmed</em> HTML samples (300KB → ~5KB keeping id/class/data-*/aria attrs), oracle JSONs, previous version + its failure report ("price null on 3/3 samples"). Emits 1–3 candidate modules (ensemble — Evaporate result).</li>
+  <li><strong>GAUNTLET</strong> — deterministic, LLM not consulted: AST gate → sandbox-run on stored sample HTML → per-field compare vs oracle (exact for stable fields, tolerant for volatile) → regression on golden fixtures. Score per candidate (precision/recall vs oracle, fixture pass, exec errors). Promote needs <strong>100% schema validity, ≥98% field agreement w/ oracle, 100% fixture pass</strong> (volatile fields excluded from exactness).</li>
+  <li><strong>PROMOTE.</strong> Best passing candidate → <code>crawlers/&lt;family&gt;/v&lt;N+1&gt;.py</code>; the version ladder gets the new version appended and reordered to active (§7). Old versions retained. Samples + agreed outputs become new golden fixtures. Audit entry written.</li>
+  <li><strong>Retry loop.</strong> All candidates fail → regenerate with the scored failure report appended (model sees <em>why</em>). Max 3 rounds → family status <code>escalated</code>, human notified, T2 fallback keeps serving meanwhile.</li>
+</ol>
+
+<div class="box"><strong>Access Recovery is the same machine on the fetch side.</strong> Identical shape: try strategies in order → first that passes (a validating fetch) wins → save the winner → escalate to human after <em>k</em> failed rounds. One mental model, two surfaces (extraction breaks; fetching is blocked).</div>
+
+<div class="filename">audit log entry (example)</div>
+<pre><code>{
+  "ts": "2026-06-12T21:14:03Z",
+  "event": "promote",
+  "family": "books.toscrape.com/product_list",
+  "from_version": 2, "to_version": 3,
+  "trigger": "drift: price fill-rate 0.0 over 14 runs (was 1.0)",
+  "loop_run": 17, "rounds": 1, "candidates_tested": 3,
+  "winner_scores": {"schema_valid": 1.0, "oracle_field_agreement": 0.992,
+                     "fixture_pass": "9/9", "samples": 4},
+  "code_diff": "crawlers/books_toscrape__product_list/v2.py..v3.py",
+  "llm": {"model": "anthropic/claude-fable-5", "tokens": 41250, "cost_usd": 0.31}
+}
+</code></pre>
+
+<h2 id="validation"><span class="num">10</span>Correctness validation — layered</h2>
+<p>"Correct" is checked at two moments: <strong>generation time</strong> (is the new crawler right?) and <strong>runtime</strong> (did the old one silently break?). Layers, cheap → expensive:</p>
+<table>
+<tr><th>#</th><th>Gate</th><th>Catches</th><th>Misses</th><th>When</th><th>Phase</th></tr>
+<tr><td>1</td><td><strong>Pydantic schema</strong> (types, ranges, formats, required)</td><td>Breakage-shaped errors: nulls, wrong types, "Free shipping" in price</td><td>Wrong-element-right-type</td><td>Every extraction</td><td><span class="pill p1">POC</span></td></tr>
+<tr><td>2</td><td><strong>Field heuristics</strong> per family: fill-rate floor, item-count floor vs trailing baseline</td><td>Partial breakage (one field died), default-value trap</td><td>Plausible wrong values</td><td>Every run</td><td><span class="pill p1">POC</span> (simple floors)</td></tr>
+<tr><td>3</td><td><strong>Oracle agreement</strong> — candidate output vs LLM direct-read of same page</td><td>Wrong-element-right-type (sidebar price!)</td><td>Both agreeing on a moved page (rare)</td><td>Loop, gen-time</td><td><span class="pill p1">POC</span></td></tr>
+<tr><td>4</td><td><strong>Golden-fixture regression</strong> — stored HTML → expected JSON</td><td>Regressions vs known-good past</td><td>New layout content</td><td>Loop, gen-time</td><td><span class="pill p1">POC</span></td></tr>
+<tr><td>5</td><td><strong>History cross-check</strong> — diff vs last-known-good values for same URLs, volatile-tolerance bands (Kadoa pattern)</td><td>Swapped fields (regular↔sale price), unit changes (VAT)</td><td>—</td><td>Loop, gen-time</td><td><span class="pill p1">POC</span> (basic)</td></tr>
+<tr><td>6</td><td><strong>LLM judge, sampled</strong> — cheap model compares HTML <em>snippet</em> vs extracted JSON on 1–5% of production runs (~85–90% human agreement; deterministic exact-match override first)</td><td>Slow semantic rot in production</td><td>Ambiguous fields (judge unreliable exactly where humans disagree)</td><td>Runtime, sampled</td><td><span class="pill p2">Phase 2</span></td></tr>
+<tr><td>7</td><td><strong>Distribution monitors</strong> (PSI/JS-divergence vs reference window) + canary URLs on schedule</td><td>Silent fleet-wide drift</td><td>—</td><td>Runtime, scheduled</td><td><span class="pill p2">Phase 2</span></td></tr>
+</table>
+
+<div class="filename">schemas/product.py (example — note volatile-field metadata used by gates 4/5)</div>
+<pre><code>class Product(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1)
+    price: Decimal = Field(gt=0, lt=1_000_000)
+    currency: str = Field(pattern=r"^[A-Z]{3}$", default="GBP")
+    in_stock: bool
+    url: HttpUrl
+    image_url: HttpUrl | None = None
+
+    VOLATILE: ClassVar[set[str]] = {"price", "in_stock"}   # tolerance, not exactness, in regression gates
+</code></pre>
+
+<div class="box warn"><strong>Known residual risk</strong> (research-confirmed, accepted): if the <em>page itself</em> moves meaning (e.g. price now shown ex-VAT), oracle and crawler can agree on a value that's wrong for your business. Layer 5 tolerance-band alerts catch the jump; final defense is the audit log + Phase-2 monitors. No autonomous system closes this fully.</div>
+
+<h2 id="schemas"><span class="num">11</span>Schema extensibility (your open-source requirement)</h2>
+<p>Adding a new output schema = drop a Pydantic file in <code>schemas/</code>, no engine changes:</p>
+<pre><code># schemas/job_posting.py — contributed by a user
+class JobPosting(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    title: str
+    company: str
+    location: str | None
+    salary_min: Decimal | None
+    posted_at: date | None
+    url: HttpUrl
+    VOLATILE: ClassVar[set[str]] = {"salary_min"}
+</code></pre>
+<ul>
+  <li>Schemas are versioned by name: <code>JobPosting@1</code>. Families bind to a schema ref; changing a schema version triggers regen for bound families (the Loop handles migration — same machinery again).</li>
+  <li>The codegen + oracle prompts take the schema's JSON Schema dump — so new schemas need <strong>zero prompt changes</strong>.</li>
+  <li>Request API: <code>crawl(url, schema="JobPosting@1")</code> for new families; known families use their binding.</li>
+</ul>
+
+<h2 id="testing"><span class="num">12</span>Test &amp; demo plan</h2>
+<ul>
+  <li><strong>Unit:</strong> AST gate (malicious-code corpus must all be rejected), validator gates, router, failure classifier, access-strategy ladder ordering.</li>
+  <li><strong>Offline-first parsers:</strong> contract design makes <code>crawl()</code> testable against stored HTML via a fake <code>ctx</code> — no network in unit tests.</li>
+  <li><strong>Flagship E2E (CI, deterministic):</strong> <code>tests/fixture_server</code> serves a local mirror of books.toscrape.com with switchable modes. Test script:
+    <ol>
+      <li>Bootstrap: Loop generates crawler v1 against mirror → assert correct extraction.</li>
+      <li><strong>Mutate the mirror</strong> (rename <code>.price_color</code> → <code>.price-box</code>, restructure cards) — simulated redesign → v1 fails → version ladder + T2 fallback serve correct data → Loop promotes v2 → next request fast again.</li>
+      <li><span class="pill new">v2</span> <strong>Fake-block mode:</strong> server returns a 403/Cloudflare-style challenge until a configured bypass header/cookie is present → assert Access Recovery escalates, applies the strategy, gets through, and <em>saves the winner</em> so the next fetch skips straight to it.</li>
+    </ol>
+    Local server + recorded LLM responses (cassettes) → zero flakiness, CI needs no API keys. This test IS the product pitch.</li>
+  <li><strong>Live sandbox:</strong> books/quotes.toscrape.com (built for scraping practice; quotes has a JS variant → exercises <code>fetch_rendered</code> + stealth rung).</li>
+  <li><strong>Your sites:</strong> integration phase — you add them to <code>authorized_domains.yaml</code> with any needed credentials/bypass tokens; we bootstrap families and watch both loops handle real layouts and real WAFs. (I'll need the URLs + how you authenticate when we get there.)</li>
+</ul>
+
+<h2 id="phases"><span class="num">13</span>Phasing</h2>
+<table>
+<tr><th><span class="pill p1">POC (build first)</span></th><th><span class="pill p2">Phase 2</span></th></tr>
+<tr><td>
+Contract + executor + version ladder + pagination<br>
+Registry (SQLite) + versioned crawler files<br>
+Router (URL regex)<br>
+Safety: AST gate, domain allowlist, rate limiter<br>
+<strong>Access Recovery ladder</strong>: backoff, headers, browser, stealth (Patchright), session/credential injection, bypass token; save winner per domain<br>
+robots toggle (default off)<br>
+Validator gates 1–5<br>
+T2 fallback (litellm) + failure classifier<br>
+The Loop end-to-end (sample → oracle → codegen → gauntlet → promote → escalate)<br>
+Schemas: Product, Quote/Article<br>
+CLI + audit log<br>
+Fixture server (mutate + fake-block modes) + flagship E2E
+</td><td>
+T1 fingerprint healing (no-LLM relocation)<br>
+DOM-shingle routing for unknown URLs + structural drift early-alarm<br>
+LLM judge sampling in production<br>
+Distribution monitors (Evidently-style) + canary scheduler<br>
+CAPTCHA-solver plugin (opt-in) + proxy rotation<br>
+Multi-candidate ensemble tuning, prompt eval harness<br>
+Dashboard / web UI over registry + audit + access health<br>
+Postgres option, concurrency hardening<br>
+List+detail two-step crawl patterns
+</td></tr>
+</table>
+
+<h2 id="stack"><span class="num">14</span>Tech stack</h2>
+<table>
+<tr><th>Concern</th><th>Choice</th><th>Why</th></tr>
+<tr><td>Language</td><td>Python 3.12, asyncio</td><td>Your pick; best scraping + LLM ecosystem</td></tr>
+<tr><td>HTTP fetch</td><td>httpx (inside FetchContext)</td><td>async, HTTP/2</td></tr>
+<tr><td>JS rendering / stealth</td><td>Playwright + <strong>Patchright</strong></td><td>Patchright = drop-in patched Playwright; clears most JS/fingerprint challenges on authorized sites (access rung 4)</td></tr>
+<tr><td>Access strategies</td><td>pluggable <code>AccessStrategy</code> protocol</td><td>backoff/session/bypass-token built in; captcha-solver + proxy as opt-in plugins</td></tr>
+<tr><td>Parsing (generated code)</td><td>parsel</td><td>Scrapy's battle-tested selector lib; CSS + XPath one API</td></tr>
+<tr><td>Schemas/validation</td><td>Pydantic v2</td><td>fast, JSON Schema export feeds prompts</td></tr>
+<tr><td>LLM</td><td>litellm</td><td>your pick — any provider; config maps roles: <code>codegen_model</code> (strong), <code>oracle_model</code> (strong), <code>judge_model</code> (cheap)</td></tr>
+<tr><td>Registry</td><td>SQLite (stdlib) + files</td><td>zero ops; crawler code stays git-diffable</td></tr>
+<tr><td>Tests</td><td>pytest + local fixture server</td><td>deterministic self-heal + access-recovery E2E in CI</td></tr>
+<tr><td>License</td><td>Apache-2.0 (proposed)</td><td>OSS-friendly; all deps permissive (we deliberately avoid AGPL deps like Firecrawl/Skyvern)</td></tr>
+</table>
+
+<h2 id="risks"><span class="num">15</span>Risks &amp; open questions</h2>
+<table>
+<tr><th>Risk</th><th>Mitigation in design</th></tr>
+<tr><td>LLM oracle itself wrong (~8% subtle error rates reported for direct LLM extraction)</td><td>Oracle on ≥3 samples + schema validation + history cross-check; promotion needs agreement across all; escalation when signals conflict</td></tr>
+<tr><td>Regen thrash on flaky sites</td><td>Failure taxonomy: transient ≠ drift ≠ blocked; one in-flight job per family; 3-round cap</td></tr>
+<tr><td>Generated-code security</td><td>Capability injection + AST gate + sandboxed candidates (§6a)</td></tr>
+<tr><td><span class="pill new">v2</span> Access recovery used out of authorized scope</td><td><strong>Hard domain allowlist gates every fetch</strong> — rungs 4–7 only run on allowlisted domains; captcha rung opt-in + per-domain authorization assertion; owner-WAF-allowlist recommended over solving. This is the structural control that keeps it legitimate.</td></tr>
+<tr><td><span class="pill new">v2</span> robots off by default could over-crawl</td><td>Central rate limiter still applies; toggle is one line to re-enable; documented as owned/authorized-only default</td></tr>
+<tr><td>Loop / access cost runaway</td><td>Per-family regen budget + global daily LLM budget + per-domain ladder attempt cap in config; audit log tracks $ per run</td></tr>
+<tr><td>Wrong-but-plausible data both methods agree on</td><td>Accepted residual (§10 box); tolerance-band alerts + Phase-2 monitors</td></tr>
+</table>
+<p><strong>Open questions (answer with your approval, or later):</strong></p>
+<ol>
+  <li><strong>CAPTCHA rung:</strong> ship the opt-in solver-plugin <em>interface</em> in POC (off by default), or defer the whole solver to Phase 2? (Proposal: interface in POC, no bundled provider — keeps the repo clean.)</li>
+  <li>Default LLM models in config? (Proposal: codegen/oracle = <code>anthropic/claude-fable-5</code>, judge = <code>anthropic/claude-haiku-4-5</code> — swappable via litellm.)</li>
+  <li>Repo/package name: <code>crawloop</code>?</li>
+  <li>Your authorized sites + how you authenticate to them (login, API token, WAF bypass header) — needed only when POC core works on sandboxes.</li>
+</ol>
+
+<div class="approve">
+<strong>✅ To approve:</strong> reply <span class="kbd">approve</span> in chat — I'll then produce the implementation plan (task breakdown, TDD order) before writing code.<br>
+<strong>✏️ To change:</strong> reply with section numbers + what to adjust, e.g. <em>"§6: ship captcha solver in POC; §13: add proxy rotation to POC"</em>.
+</div>
+
+<p class="meta" style="margin-top:40px">Sources behind §2 research claims available on request — full research reports retained from this session (Kadoa/Reworkd/Oxylabs product docs, Evaporate VLDB'24, AutoScraper EMNLP'24, Healenium, Spidermon/Zyte practice, NEXT-EVAL, domhash, Scrapling, Stagehand caching).</p>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,25 @@
+Write a crawler for the page family described by the samples below.
+
+JSON Schema for ONE record (every item your crawler emits must conform to this):
+$schema_json
+
+The crawler contract and the context API you must use:
+$contract
+
+SAMPLE PAGES (trimmed HTML — write selectors that work across all of them):
+$samples
+
+ORACLE EXTRACTION (the trusted correct records for each sample above — your
+crawler should reproduce these from the corresponding page's HTML):
+$oracle
+
+PREVIOUS VERSION of this crawler (the code currently in use, or "none" if this is
+the first version — improve on it; do not blindly copy it if it was failing):
+$previous
+
+FAILURE REPORT for the previous version (why it was rejected, or "none" — fix the
+specific problems it names):
+$failure
+
+Now output exactly one ```python``` code block containing the complete crawler
+module. No prose outside the block.

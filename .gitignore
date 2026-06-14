@@ -1,0 +1,9 @@
+__pycache__/
+.venv/
+*.db
+.pytest_cache/
+crawlers/
+fixtures/snapshots/
+.env
+*.egg-info/
+build/

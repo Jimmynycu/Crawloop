@@ -1,0 +1,10 @@
+Fill ONLY these residual fields for the ONE record on the page below.
+
+Residual fields and their types / enum codes (a projection of the record schema —
+these are the ONLY keys your output object may contain):
+$fields_json
+
+PAGE (structured JSON first, then de-scripted HTML; may be truncated):
+$html
+
+Return ONLY a JSON object with those keys, nothing else.
